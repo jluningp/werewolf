@@ -1,0 +1,28 @@
+<div>
+  Game %(game)
+  <div>
+    <h2>Players</h2>
+    <div id="players">
+    %(players)<br>
+    <span id="playerNum">%(player_number)</span> Players<br>
+    </div>
+    <button onclick="refreshPlayers()">Refresh Player List</button>
+  </div>
+  <div>
+    <h2>Roles</h2>
+    Werewolf <input onchange="role_changed()" id="werewolves" type="number" value="%(werewolves)"><br>
+    Robber <input onchange="role_changed()" id="robbers" type="number" value="%(robbers)"><br>
+    Troublemaker <input onchange="role_changed()" id="troublemakers" type="number" value="%(troublemakers)"><br>
+    Seer <input onchange="role_changed()" id="seers" type="number" value="%(seers)"><br>
+    Insomniac <input onchange="role_changed()" id="insomniacs" type="number" value="%(insomniacs)"><br>
+    Mason <input onchange="role_changed()" id="masons" type="number" value="%(masons)"><br>
+    Villager <input onchange="role_changed()" id="villagers" type="number" value="%(villagers)"><br>
+    <span id="roleNum">%(rolenum)</span> Roles<br>
+    <span id="rolesNeeded">%(roleneeded)</span> Still Needed
+  </div>
+  <br>
+  <span id="saved"><font color="green">No Unsaved Changes</font></span>
+  <button onclick="saveSettings()" disabled id="save">Save</button><br><br>
+
+  <button onclick="startGame()" disabled id="start">Start!</button>
+</div>

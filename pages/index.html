@@ -1,0 +1,304 @@
+<!doctype html>
+<html>
+  <head>
+    <title>One Night Werewolf</title>
+  </head>
+  <body>
+    <h1>One Night Werewolf</h1>
+    <div id="content">
+    </div>
+  </body>
+<script>
+
+var xmlhttp = new XMLHttpRequest ()
+
+window.onload = function () {
+    refresh (tryConstantRefresh);
+}
+
+function tryConstantRefresh () {
+    window.setTimeout (constantRefresh, 3000);
+}
+
+function constantRefresh () {
+    if (document.getElementById("config_view") || document.getElementById("view_role")
+       ) {
+        refresh(function () { window.setTimeout (constantRefresh, 3000) });
+    } else if (document.getElementById("wait")) {
+        refresh(function () { window.setTimeout (constantRefresh, 5000)});
+    }
+
+}
+
+function requestHTML (page) {
+    xmlhttp.open("GET", page, true);
+    xmlhttp.setRequestHeader("Content-Type", "text/html");
+    xmlhttp.send(null);
+}
+
+function requestJSON (page) {
+    xmlhttp.open("GET", page, true);
+    xmlhttp.setRequestHeader("Content-Type", "text/json");
+    xmlhttp.send(null);
+}
+
+function update_content (new_content) {
+    document.getElementById("content").innerHTML = new_content;
+}
+
+
+function refresh (callback) {
+    var name = getName ()
+    var id = getId ()
+    var game = getGame ()
+    if (name && id && game) {
+        requestHTML ("refresh/?name=" + name + "&id=" + id + "&game=" + game);
+    } else {
+        requestHTML ("refresh");
+    }
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            console.log(xmlhttp.responseText);
+            update_content(xmlhttp.responseText);
+            callback();
+        }
+    }
+}
+
+function newGame () {
+    var name = document.getElementById("name").value;
+    requestJSON("newgame/?name=" + name);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            console.log(xmlhttp.responseText);
+            var info = JSON.parse (xmlhttp.responseText);
+            document.cookie = "name=" + info.name;
+            document.cookie = "id=" + info.id;
+            document.cookie = "game=" + info.game;
+            refresh (tryConstantRefresh);
+        }
+    }
+}
+
+function joinGame () {
+    var name = document.getElementById("name").value;
+    var code = document.getElementById("code").value;
+    requestJSON("joingame/?name=" + name + "&game=" + code);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            var info = JSON.parse (xmlhttp.responseText);
+            document.cookie = "name=" + info.name;
+            document.cookie = "id=" + info.id;
+            document.cookie = "game=" + info.game;
+            refresh (tryConstantRefresh);
+        }
+    }
+}
+
+function recountRoles () {
+    var roleNum = document.getElementById("roleNum");
+    var rolesNeeded = document.getElementById("rolesNeeded");
+    if (roleNum && rolesNeeded) {
+        var players = document.getElementsByClassName("player").length;
+        var roles = (parseInt(document.getElementById("werewolves").value)
+                     + parseInt(document.getElementById("robbers").value)
+                     + parseInt(document.getElementById("troublemakers").value)
+                     + parseInt(document.getElementById("seers").value)
+                     + parseInt(document.getElementById("insomniacs").value)
+                     + parseInt(document.getElementById("masons").value)
+                     + parseInt(document.getElementById("villagers").value))
+        roleNum.innerText = roles;
+        rolesNeeded.innerText = players + 3 - roles;
+        if (players + 3 - roles === 0) {
+            document.getElementById("start").disabled = false;
+        }
+    }
+}
+
+function formatRoles () {
+    var ww = document.getElementById("werewolves").value;
+    var r = document.getElementById("robbers").value
+    var t = document.getElementById("troublemakers").value
+    var s = document.getElementById("seers").value
+    var i = document.getElementById("insomniacs").value
+    var m = document.getElementById("masons").value
+    var v = document.getElementById("villagers").value
+    return ("&werewolves=" + ww +
+            "&robbers=" + r +
+            "&troublemakers=" + t +
+            "&seers=" + s +
+            "&insomniacs=" + i +
+            "&masons=" + m +
+            "&villagers=" + v);
+}
+
+function role_changed () {
+    document.getElementById("saved").innerHTML = "<font color='red'>Unsaved Changes</font>";
+    document.getElementById("save").disabled = false;
+    recountRoles();
+}
+
+function refreshPlayers () {
+    var game = getGame ();
+    requestJSON("players/?game=" + game)
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            document.getElementById("players").innerHTML = xmlhttp.responseText;
+            recountRoles();
+        }
+    }
+}
+
+function saveSettings () {
+    var game = getGame();
+    requestHTML ("savesettings/?game=" + game + formatRoles ());
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            document.getElementById("saved").innerHTML = "<font color='green'>No Unsaved Changes</font>"
+            document.getElementById("save").disabled = true;
+        }
+    }
+}
+
+function startGame () {
+    var game = getGame ();
+    var name = getName ();
+    var id = getId ();
+    requestHTML ("startgame/?game=" + game + "&name=" + name + "&id=" + id + formatRoles ());
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            update_content(xmlhttp.responseText);
+            refresh(tryConstantRefresh);
+        }
+    }
+}
+
+function beginNight () {
+    var game = getGame ();
+    requestHTML ("beginnight/?game=" + game);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            refresh(tryConstantRefresh);
+        }
+    }
+}
+
+function rob () {
+    var checked = false;
+    var radios = document.getElementsByTagName("input");
+    for (var i = 0; i < radios.length; i++) {
+        var radio = radios[i];
+        if (radio.type == "radio") {
+            if (radio.checked) {
+                var target = radio.id;
+                var game = getGame ();
+                var name = getName ();
+                var id = getId ();
+                requestHTML ("rob/?game=" + game + "&name=" + name + "&id=" + id + "&target=" + target);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState == 4) {
+                        refresh(tryConstantRefresh);
+                    }
+                }
+                return;
+            }
+        }
+    }
+    if (!checked) {
+        console.log("Must select button.");
+        return;
+    }
+}
+
+function troublemake () {
+    var target1 = null;
+    var target2 = null;
+    var radios = document.getElementsByTagName("input");
+    for (var i = 0; i < radios.length; i++) {
+        var radio = radios[i];
+        if (radio.type == "checkbox") {
+            if (radio.checked) {
+                if (target1) {
+                    target2 = radio.id;
+                } else {
+                    target1 = radio.id;
+                }
+            }
+        }
+    }
+    var game = getGame ();
+    var name = getName ();
+    var id = getId ();
+    requestHTML ("troublemake/?game=" + game + "&name=" + name + "&id=" + id + "&target1=" + target1 + "&target2=" + target2);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            refresh(tryConstantRefresh);
+        }
+    }
+}
+
+function see () {
+    var checked = false;
+    var radios = document.getElementsByTagName("input");
+    for (var i = 0; i < radios.length; i++) {
+        var radio = radios[i];
+        if (radio.type == "radio") {
+            if (radio.checked) {
+                var target = radio.id;
+                var game = getGame ();
+                var name = getName ();
+                var id = getId ();
+                requestHTML ("see/?game=" + game + "&name=" + name + "&id=" + id + "&target=" + target);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState == 4) {
+                        refresh(tryConstantRefresh);
+                    }
+                }
+                return;
+            }
+        }
+    }
+    if (!checked) {
+        console.log("Must select button.");
+        return;
+    }
+}
+
+
+function ok () {
+    var game = getGame ();
+    var name = getName ();
+    var id = getId ();
+    requestHTML ("ready/?game=" + game + "&name=" + name + "&id=" + id);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            refresh(tryConstantRefresh);
+        }
+    }
+}
+
+function readCookie(name) {
+    var nameEQ = name + "=";
+    var ca = document.cookie.split(';');
+    for(var i=0;i < ca.length;i++) {
+        var c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+    }
+    return null;
+}
+
+function getName () {
+    return readCookie ("name");
+}
+
+function getId () {
+    return readCookie ("id");
+}
+
+function getGame () {
+    return readCookie ("game");
+}
+
+</script>
+</html>
