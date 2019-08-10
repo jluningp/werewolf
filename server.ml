@@ -369,7 +369,8 @@ let join_game variables =
   printf "%s\n" (List.to_string ~f:(fun s -> s) (String.Map.keys variables));
   let opt = begin
       let open Option.Let_syntax in
-      let%bind code = String.Map.find variables "game" in
+      let%bind raw_code = String.Map.find variables "game" in
+      let code = String.uppercase raw_code in
       let%bind game = String.Table.find games code in
       let%map name = String.Map.find variables "name" in
       (game, name)
