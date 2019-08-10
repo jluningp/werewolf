@@ -28,6 +28,8 @@ let is_ready player =
 let views player =
   List.filter_map player.log ~f:(function
         Action.View view -> Some view
+      | Action.ViewLoneMason -> Some {Action.card=Role.Mason
+                                    ; Action.player_or_center=player.name}
       | _ -> None)
 
 let swap player =

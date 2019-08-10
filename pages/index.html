@@ -76,6 +76,9 @@
       #leave-box {
       text-align: right;
       }
+      .seer {
+      width: 45%;
+      }
     </style>
   </head>
   <body>
@@ -92,6 +95,12 @@ var xmlhttp = new XMLHttpRequest ()
 
 window.onload = function () {
     refresh (tryConstantRefresh);
+}
+
+function testGame (name) {
+    document.cookie = "name=" + name;
+    document.cookie = "id=" + name;
+    document.cookie = "game=TEST";
 }
 
 function tryConstantRefresh () {

@@ -25,6 +25,41 @@ end
 
 let games : Game.t String.Table.t = String.Table.create ~size:5 ()
 
+let test_player name role =
+  let n = name in
+  let open Player in
+  {name=n
+  ; id=n
+  ; evening_role=role
+  ; morning_role=role
+  ; log=[]}
+
+let test_game =
+  let open Game in
+  { code="TEST"
+  ; owner="B"
+  ; players = String.Map.of_alist_exn [("B", test_player "B" Role.Troublemaker)
+                                     ; ("C", test_player "C" Role.Werewolf)
+                                     ; ("E", test_player "E" Role.Seer)
+                                     ; ("F", test_player "F" Role.Robber)
+                                     ; ("H", test_player "H" Role.Mason)
+                                     ; ("I", test_player "I" Role.Insomniac)
+                                     ; ("J", test_player "J" Role.Villager)]
+  ; unassigned=[Role.Villager; Role.Werewolf; Role.Mason]
+  ; state=Game.Role
+  ; config={
+      werewolf=1
+    ; seer=true
+    ; robber=true
+    ; villager=1
+    ; troublemaker=true
+    ; mason=2
+    ; insomniac=1
+    }
+  }
+
+let () = String.Table.set games ~key:"TEST" ~data:test_game
+
 let add_game game =
   String.Table.add games ~key:(Game.code game) ~data:game |> ignore
 
@@ -140,7 +175,7 @@ let player_choices game player =
   |> Game.players
   |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
   |> display_players ~wrap:(fun p ->
-         "<input type='checkbox' id='" ^ p ^ "'>&nbsp;&nbsp;'>" ^ p ^ "<br>")
+         "<input type='checkbox' id='" ^ p ^ "'>&nbsp;&nbsp;" ^ p ^ "<br>")
 
 let update_state game =
   match Game.state game with
@@ -219,7 +254,9 @@ let werewolf_page game player =
   | wolves -> (match Player.views player with
                  [] -> werewolf_see_others game player wolves
                | _ -> ());
-              let wolf_list = String.concat ~sep:"<br>" wolves in
+              let wolf_list = sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                                                       (List.map wolves ~f:(fun s ->
+                                                            sprintf "<li>%s</li>" s))) in
               page "pages/werewolves.html" [("names", wolf_list)]
 
 let mason_page game player =
@@ -231,7 +268,9 @@ let mason_page game player =
   | masons -> (match Player.views player with
                  [] -> mason_see_others game player masons
                | _ -> ());
-              let mason_list = String.concat ~sep:"<br>" masons in
+              let mason_list = sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                                                        (List.map masons ~f:(fun s ->
+                                                             sprintf "<li>%s</li>" s))) in
               page "pages/masons.html" [("names", mason_list)]
 
 let seer_page game player =
@@ -295,13 +334,14 @@ let morning_page game player =
     | _ -> page "pages/wait.html" []
 
 let debate_page player =
-  let actions = String.concat
-                  ~sep:"<br>"
-                  (List.filter_map (List.rev (Player.log player)) ~f:(function
-                         Action.Ready -> None
-                       | action -> Some (Action.to_string ~me:player.name action))) in
+  let acts = List.filter_map (List.rev (Player.log player)) ~f:(function
+                   Action.Ready -> None
+                 | action -> Some (Action.to_string ~me:player.name action)) in
+  let actions = sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                                         (List.map acts ~f:(fun s ->
+                                              sprintf "<li>%s</li>" s))) in
   page "pages/debate.html" [("actions", actions)
-                           ; ("original", Role.to_string (Player.evening_role player))]
+                          ; ("original", Role.to_string (Player.evening_role player))]
 
 let current_page old_game player =
   let game = update_state old_game in
