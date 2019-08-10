@@ -461,10 +461,10 @@ let direct url variables =
     | _ -> not_found
   with InvalidInput s -> page "pages/start.html" [("error", s)]
 
-let run () =
+let run port () =
   let%bind server =
     Tcp.Server.create ~on_handler_error:`Raise
-      (Tcp.Where_to_listen.of_port 8000)
+      (Tcp.Where_to_listen.of_port port)
       (fun _addr r w ->
         let%bind req = Http.parse_request r in
         let%map response = match req with
@@ -478,4 +478,9 @@ let run () =
   Tcp.Server.close_finished server
 
 let () =
-  Command.run (Command.async ~summary:"An echo server" (Command.Param.return run))
+  Command.run (Command.async
+                 ~summary:"An echo server"
+                 (Command.Spec.map
+                    (Command.Param.flag "port"
+                       ~doc:"port"
+                       (Command.Param.required Command.Param.int)) ~f:run))
