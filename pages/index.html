@@ -104,17 +104,14 @@ function testGame (name) {
 }
 
 function tryConstantRefresh () {
-    window.setTimeout (constantRefresh, 3000);
+    window.setTimeout (constantRefresh, 300);
 }
 
 function constantRefresh () {
     if (document.getElementById("config_view") || document.getElementById("view_role")
-       ) {
-        refresh(function () { window.setTimeout (constantRefresh, 3000) });
-    } else if (document.getElementById("wait")) {
-        refresh(function () { window.setTimeout (constantRefresh, 5000)});
+        || document.getElementById("wait") || document.getElementById("wait_morning")) {
+        refresh(function () { window.setTimeout (constantRefresh, 300) });
     }
-
 }
 
 function requestHTML (page) {

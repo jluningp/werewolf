@@ -331,7 +331,7 @@ let morning_page game player =
   else
     match player.evening_role with
       Role.Insomniac -> insomniac_page game player
-    | _ -> page "pages/wait.html" []
+    | _ -> page "pages/wait_morning.html" []
 
 let debate_page player =
   let acts = List.filter_map (List.rev (Player.log player)) ~f:(function
