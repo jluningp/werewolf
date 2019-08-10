@@ -1,2 +1,2 @@
 cd _build
-./server.native
+./server.native -port $PORT
