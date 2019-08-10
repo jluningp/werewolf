@@ -23,10 +23,13 @@ module Page = struct
 end
 
 
-let games : game String.Table.t = String.Table.create ~size:5 ()
+let games : Game.t String.Table.t = String.Table.create ~size:5 ()
+
+let add_game game =
+  String.Table.add games ~key:(Game.code game) ~data:game |> ignore
 
 let update_game game =
-  match String.Table.find game.code with
+  match String.Table.find games (Game.code game) with
     None -> raise (InvalidInput "Game does not exist.")
   | Some _ -> String.Table.set games ~key:game.code ~data:game
 
@@ -58,7 +61,7 @@ let empty_response = html ~content:""
 let game variables =
   let open Option.Let_syntax in
   let%bind code = String.Map.find variables "game" in
-  String.Map.find games code
+  String.Table.find games code
 
 let game_exn ?(error="Invalid or missing game code.") variables =
   match game variables with
@@ -69,18 +72,24 @@ let player game variables =
   let open Option.Let_syntax in
   let%bind name = String.Map.find variables "name" in
   let%bind id = String.Map.find variables "id" in
-  let%bind player = String.Map.find game.players name in
+  let%bind player = String.Map.find (Game.players game) name in
   Option.some_if (name = player.name && id = player.id) player
 
 let player_exn ?(error="Invalid player name or id.") game variables =
   match player variables game with
     None -> raise (InvalidInput error)
+  | Some player -> player
 
 let config_exn ?(error="Invalid config options.") variables role =
-  match String.Map.find variables str with
-    None -> raise (InvalidInput error)
+  match String.Map.find variables role with
+    None -> raise (InvalidInput (error ^ " Config: " ^ role))
   | Some value -> (try Int.of_string value
-                   with Failure _ -> raise (InvalidInput error))
+                   with Failure _ -> raise (InvalidInput (error ^ " Config: " ^ role)))
+
+let name_to_role game name =
+  match String.Map.find (Game.players game) name with
+    None -> raise (InvalidInput "Viewed a card that doesn't exist.")
+  | Some player -> Player.morning_role player
 
 let display_players players ~wrap =
   players
@@ -92,7 +101,7 @@ let config_info game =
   let player_count = Game.player_count game in
   let role_count = Config.count game.config in
   let roles = List.map (Config.to_alist game.config) ~f:(fun (role, count) ->
-                  (Role.to_string role, Int.to_string count)) in
+                  (Role.to_string_plural role, Int.to_string count)) in
   let players = display_players game.players ~wrap:(fun p ->
                     "<span class='player'>" ^ p ^ "</span><br>")
   in
@@ -104,34 +113,38 @@ let config_info game =
   @ roles
 
 let other_werewolves game player =
-  game.players
-  |> String.Map.filter ~f:(fun p -> Role.equal p.evening_role Role.Werewolf
-                                    && p.name <> player.name)
+  game
+  |> Game.players
+  |> String.Map.filter ~f:(fun p -> Role.equal (Player.evening_role p) Role.Werewolf
+                                    && (Player.name p <> Player.name player))
   |> String.Map.keys
 
 let other_masons game player =
-  game.players
-  |> String.Map.filter ~f:(fun p -> Role.equal p.evening_role Role.Masons
-                                    && p.name <> player.name)
+  game
+  |> Game.players
+  |> String.Map.filter ~f:(fun p -> Role.equal (Player.evening_role p) Role.Mason
+                                    && Player.name p <> Player.name player)
   |> String.Map.keys
 
 let player_choice game player =
-  game.players
-  |> String.Map.filter ~f:(fun p -> p.name <> player.name)
+  game
+  |> Game.players
+  |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
   |> display_players ~wrap:(fun p ->
          "<input type='radio' id='" ^ p ^ "'>" ^ p ^ "<br>")
 
 let player_choices game player =
-  game.players
-  |> String.Map.filter ~f:(fun p -> p.name <> player.name)
+  game
+  |> Game.players
+  |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
   |> display_players ~wrap:(fun p ->
          "<input type='checkbox' id='" ^ p ^ "'>" ^ p ^ "<br>")
 
 let update_state game =
-  match game.stage with
+  match Game.state game with
     Game.Night -> if String.Map.for_all game.players ~f:(fun p ->
-                         Player.is_ready p || Role.equal p.evening_role Role.Insomniac)
-                  then Game.set_state game Game.Morning
+                         Player.is_ready p || Role.equal (Player.evening_role p) Role.Insomniac)
+                  then Game.set_state game Game.Morning |> Game.make_moves
                   else game
   | Game.Morning -> if String.Map.for_all game.players ~f:Player.is_ready
                     then Game.set_state game Game.Debate
@@ -140,7 +153,7 @@ let update_state game =
 
 
 let config_page game player =
-  let conditional_page = if player.name = game.owner
+  let conditional_page = if Player.name player = Game.owner game
                          then "pages/config.html"
                          else "pages/config_view.html"
   in
@@ -148,33 +161,59 @@ let config_page game player =
 
 let role_page game player =
   let conditional_element =
-    if player.name = game.owner
+    if Player.name player = Game.owner game
     then "<button onclick='beginNight()' id='night'>Begin Night!</button>"
     else "<input type='hidden' id='view_role'>"
   in
-  page "pages/role.html" [("role", player.evening_role)
+  page "pages/role.html" [("role", Role.to_string (Player.evening_role player))
                         ; ("button", conditional_element)]
 
 
-let werewolf_see game player =
-  let card = Cards.draw1 game.unassigned in
+let werewolf_see_center game player =
+  let card = Cards.draw1 (Game.unassigned game) in
   (player
-   |> Player.add_event ~event:(Event.View card)
+   |> Player.add_action ~action:(Action.View {card; Action.player_or_center="center"})
    |> Game.set_player game
    |> update_game);
   card
 
+let werewolf_see_others game player wolves =
+  let player = List.fold wolves ~init:player ~f:(fun p wolf ->
+                   Player.add_action
+                     p
+                     ~action:(Action.View {card=Role.Werewolf;
+                                           Action.player_or_center=wolf})) in
+  Game.set_player game player |> update_game
+
+
+let mason_see_others game player masons =
+  let player = List.fold masons ~init:player ~f:(fun p mason ->
+                   Player.add_action
+                     p
+                     ~action:(Action.View {card=Role.Mason;
+                                           Action.player_or_center=mason})) in
+  Game.set_player game player |> update_game
+
+let insomniac_see_self game player =
+  player
+  |> Player.add_action ~action:(Action.View {card=Player.morning_role player
+                                           ; Action.player_or_center=Player.name player})
+  |> Game.set_player game
+  |> update_game
+
 let werewolf_page game player =
   match other_werewolves game player with
-    [] -> let card = werewolf_see game player in
-          page "pages/lone_werewolf.html" [("card", card)]
-  | wolves -> let wolf_list = String.concat ~sep:"<br>" wolves in
+    [] -> let card = werewolf_see_center game player in
+          page "pages/lone_werewolf.html" [("card", Role.to_string card)]
+  | wolves -> werewolf_see_others game player wolves;
+              let wolf_list = String.concat ~sep:"<br>" wolves in
               page "pages/werewolves.html" [("names", wolf_list)]
 
 let mason_page game player =
   match other_masons game player with
     [] -> page "pages/lone_mason.html" []
-  | masons -> let mason_list = String.concat ~sep:"<br>" masons in
+  | masons -> mason_see_others game player masons;
+              let mason_list = String.concat ~sep:"<br>" masons in
               page "pages/masons.html" [("names", mason_list)]
 
 let seer_page game player =
@@ -182,35 +221,36 @@ let seer_page game player =
     [] -> page "pages/seer.html" [("players", player_choice game player)]
   | [{card; player_or_center}] -> page "pages/seer_reveal_player.html"
                                     [("name", player_or_center)
-                                    ; ("role", card)]
+                                    ; ("role", Role.to_string card)]
   | [card1; card2] -> page "pages/seer_reveal_center.html"
-                        [("role1", card1.card)
-                        ; ("role2", card2.card)]
+                        [("role1", Role.to_string card1.Action.card)
+                        ; ("role2", Role.to_string card2.Action.card)]
   | _ -> failwith "Invariant violated: Seer saw more than 2 cards"
 
 let robber_page game player =
   match Player.swap player with
     None -> page "pages/robber.html" [("players", player_choice game player)]
-  | Some (_, p2) -> page "pages/robber.html" [("role", p2)]
+  | Some (_, p2) -> page "pages/robber_reveal.html" [("role", Role.to_string (name_to_role game p2))]
 
 let troublemaker_page game player =
   match Player.swap player with
     None -> page "pages/troublemaker.html" [("players", player_choices game player)]
-  | Some _ -> page "pages/wait.html"
+  | Some _ -> page "pages/wait.html" []
 
 let villager_page game player =
  (if Player.is_ready player
   then ()
   else player
-       |> Player.add_event ~event:(Event.Ready)
+       |> Player.add_action ~action:(Action.Ready)
        |> Game.set_player game
        |> update_game);
  page "pages/wait.html" []
 
 let insomniac_page game player =
-  if Role.equal player.evening_role player.morning_role
+  insomniac_see_self game player;
+  if Role.equal (Player.evening_role player) (Player.morning_role player)
   then page "pages/insomniac_same.html" []
-  else page "page/insomniac_change.html" [("role", player.morning_role)]
+  else page "pages/insomniac_change.html" [("role", Role.to_string (Player.morning_role player))]
 
 let night_page game player =
   if Player.is_ready player
@@ -224,6 +264,7 @@ let night_page game player =
     | Role.Troublemaker -> troublemaker_page game player
     | Role.Villager -> villager_page game player
     | Role.Insomniac -> page "pages/wait.html" []
+    | Role.Unassigned -> failwith "Invariant violation: A player was not assigned a role"
 
 let morning_page game player =
   if Player.is_ready player
@@ -231,10 +272,15 @@ let morning_page game player =
   else
     match player.evening_role with
       Role.Insomniac -> insomniac_page game player
-    | _ -> page "pages/wait.html"
+    | _ -> page "pages/wait.html" []
 
-let debate_page game player =
-  page "pages/debate.html" []
+let debate_page player =
+  let actions = String.concat
+                  ~sep:"<br>"
+                  (List.filter_map (Player.log player) ~f:(function
+                         Action.Ready -> None
+                       | action -> Some (Action.to_string ~me:player.name action))) in
+  page "pages/debate.html" [("actions", actions)]
 
 let current_page old_game player =
   let game = update_state old_game in
@@ -244,21 +290,22 @@ let current_page old_game player =
   | Role -> role_page game player
   | Night -> night_page game player
   | Morning -> morning_page game player
-  | Debate -> debate_page game player
+  | Debate -> debate_page player
 
 let player_section game =
-  sprintf "%s<br><span id=\"playerNum\">%i</span> Players<br>"
-    (display_players game.players ~wrap:(fun p ->
+  sprintf "%s<hr><span id=\"playerNum\">%i</span> Players<br>"
+    (display_players (Game.players game) ~wrap:(fun p ->
          "<span class='player'>" ^ p ^ "</span><br>"))
     (String.Map.length game.players)
 
 let game_info game player =
   json (sprintf "{\"game\" : \"%s\", \"name\" : \"%s\", \"id\" : \"%s\"}"
-          game.code
-          player.name
-          player.id)
+          (Game.code game)
+          (Player.name player)
+          (Player.id player))
 
 let join_game variables =
+  printf "%s\n" (List.to_string ~f:(fun s -> s) (String.Map.keys variables));
   let opt = begin
       let open Option.Let_syntax in
       let%bind code = String.Map.find variables "game" in
@@ -270,13 +317,14 @@ let join_game variables =
   match opt with
   | Some (game, name) -> begin
       let player = Player.create name in
-      Game.add_player ~exn:(fun s -> InvalidInput s) game player |> update_game;
-      game_info game player
+      let joined_game = Game.add_player ~exn:(fun s -> InvalidInput s) game player in
+      joined_game |> update_game;
+      game_info joined_game player
     end
   | None -> raise (InvalidInput "Game code or name is invalid or missing.")
 
 let unique_game game =
-  match String.Table.find games game.code with
+  match String.Table.find games (Game.code game) with
     None -> true
   | Some _ -> false
 
@@ -285,35 +333,39 @@ let rec new_game variables =
     None -> raise (InvalidInput "No username given.")
   | Some name -> let game = Game.create name in
                  if unique_game game
-                 then join_game (String.Map.add
-                                   variables
-                                   ~key:"game"
-                                   ~data:game.code)
+                 then (game |> add_game;
+                       join_game (String.Map.set
+                                    variables
+                                    ~key:"game"
+                                    ~data:game.code))
                  else new_game variables
 
 let refresh variables =
-  let game = game_exn variables ~error:"No game found." in
+  let game = game_exn variables ~error:"You're not currently in a game. Start one or join to get started!" in
   let player = player_exn variables game ~error:"You have not joined this game yet." in
   current_page game player
 
 let update_config variables =
   let game = game_exn variables in
-  let config = {
-      werewolf=config_exn "werewolves"
-    ; robber=config_exn "robbers"
-    ; troublemaker=config_exn "troublemakers"
-    ; seer=config_exn "seers"
-    ; insomniac=config_exn "insomniacs"
-    ; mason=config_exn "masons"
-    ; villager=config_exn "villagers"
-    }
-  in {game with config} |> update_game
+  let config_opt =
+    let open Option in
+    Config.empty
+    |> Config.update ~role:Role.Werewolf ~count:(config_exn variables "werewolves")
+    >>= (Config.update ~role:Role.Robber ~count:(config_exn variables "robbers"))
+    >>= (Config.update ~role:Role.Troublemaker ~count:(config_exn variables "troublemakers"))
+    >>= (Config.update ~role:Role.Seer ~count:(config_exn variables "seers"))
+    >>= (Config.update ~role:Role.Insomniac ~count:(config_exn variables "insomniacs"))
+    >>= (Config.update ~role:Role.Mason ~count:(config_exn variables "masons"))
+    >>= (Config.update ~role:Role.Villager ~count:(config_exn variables "villagers"))
+  in
+  match config_opt with
+    None -> raise (InvalidInput "Config invalid: negative values or more than one troublemaker, robber, or seer")
+  | Some config -> {game with config}
 
 let start_game variables =
-  let game = game_exn variables in
-  let player = player_exn variables game in
-  update_config variables (* renamed update_config *);
-  Game.assign_roles game |> update_game
+  update_config variables
+  |> Game.assign_roles
+  |> update_game
 
 let begin_night variables =
   let game = game_exn variables in
@@ -325,63 +377,78 @@ let players variables =
 
 let ready variables =
   let game = game_exn variables in
-  let player = player_exn variables in
-  Game.set_player game (Player.add_event player Event.Ready)
+  let player = player_exn variables game in
+  player
+  |> Player.add_action ~action:Action.Ready
+  |> Game.set_player game
   |> update_game
 
 let rob variables =
   let game = game_exn variables in
-  let player = player_exn variables in
-  if Role.equal player.evening_role Role.Robber && Option.is_none (Player.swap player)
+  let player = player_exn variables game in
+  if Role.equal (Player.evening_role player) Role.Robber && Option.is_none (Player.swap player)
   then match String.Map.find variables "target" with
-       | Some name -> (player
-                       |> Player.add_event ~event:(Event.swap (player.name, name))
-                       |> Game.set_player game
-                       |> update_game)
+       | Some name -> if Game.is_player game name
+                      then (player
+                            |> Player.add_action ~action:(Action.Swap (player.name, name))
+                            |> Player.add_action ~action:(Action.View {card=name_to_role game name
+                                                                     ; player_or_center=player.name})
+                            |> Game.set_player game
+                            |> update_game)
+                      else raise (InvalidInput "Target is not a valid player.")
        | None -> raise (InvalidInput "No target given for robber action.")
   else raise (InvalidInput "You cannot rob (or rob again).")
 
 let troublemake variables =
   let game = game_exn variables in
-  let player = player_exn variables in
+  let player = player_exn variables game in
   if Role.equal player.evening_role Role.Troublemaker && Option.is_none (Player.swap player)
   then match (String.Map.find variables "target1", String.Map.find variables "target2") with
-         (Some name1, Some name2) -> (player
-                                      |> Player.add_event ~event:(Event.Swap (name1, name2))
-                                      |> Player.add_event ~event:(Event.Ready)
-                                      |> Game.set_player game
-                                      |> update_game)
+         (Some name1, Some name2) -> if Game.is_player game name1 && Game.is_player game name2
+                                     then (player
+                                           |> Player.add_action ~action:(Action.Swap (name1, name2))
+                                           |> Player.add_action ~action:(Action.Ready)
+                                           |> Game.set_player game
+                                           |> update_game)
+                                     else raise (InvalidInput "Target is not a valid player.")
        | _ -> raise (InvalidInput "Invalid or missing targets for troublemaker action.")
   else raise (InvalidInput "You cannot troublemake (or re-troublemake).")
 
 let see variables =
   let game = game_exn variables in
-  let player = player_exn variables in
-  if Role.equal player.evening_role Role.Seer && List.null (Player.views player)
+  let player = player_exn variables game in
+  if Role.equal player.evening_role Role.Seer && List.is_empty (Player.views player)
   then match String.Map.find variables "target" with
          Some "center" -> let (card1, card2) = Cards.draw2 game.unassigned in
                           (player
-                           |> Player.add_event ~event:(Event.View card1)
-                           |> Player.add_event ~event:(Event.View card2)
+                           |> Player.add_action
+                                ~action:(Action.View {card=card1
+                                                    ; player_or_center="center"})
+                           |> Player.add_action
+                                ~action:(Action.View {card=card2
+                                                    ; player_or_center="center"})
                            |> Game.set_player game
                            |> update_game)
-       | Some name -> (player
-                       |> Player.add_event ~event:(Event.View name)
-                       |> Game.set_player game
-                       |> update_game)
+       | Some name -> (match String.Map.find (Game.players game) name with
+                         None -> raise (InvalidInput "Seer target is not a player or center card.")
+                       | Some target_player -> (player
+                                                |> Player.add_action
+                                                     ~action:(Action.View {card=Player.evening_role target_player
+                                                                         ; player_or_center=name})
+                                                |> Game.set_player game
+                                                |> update_game))
        | None -> raise (InvalidInput "Invalid or missing targets for seer action.")
   else raise (InvalidInput "You cannot see (or see twice).")
 
 let direct url variables =
-  let v = variables in
   let parts = Str.split (Str.regexp "/+") url in
-  printf (List.to_string parts ~f:(fun s -> s));
+  printf "%s\n" (List.to_string parts ~f:(fun s -> s));
   try
     match parts with
     | ["refresh"] -> refresh variables
     | ["newgame"] -> new_game variables
     | ["joingame"] -> join_game variables
-    | ["savesettings"] -> update_config variables; refresh variables
+    | ["savesettings"] -> update_config variables |> update_game; refresh variables
     | ["startgame"] -> start_game variables; refresh variables
     | ["beginnight"] -> begin_night variables; empty_response
     | ["favicon.ico"] -> favicon

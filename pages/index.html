@@ -2,6 +2,57 @@
 <html>
   <head>
     <title>One Night Werewolf</title>
+    <style>
+      body {
+      background-color: black;
+      color: white;
+      }
+      #content {
+      background-color: gray;
+      border-radius: 5px;
+      padding: 1em;
+      }
+      #new {
+      background-color:#919090;
+      border-radius: 5px;
+      padding: 0.4em;
+      margin-bottom: 0.2em;
+      }
+      #newButton {
+      }
+      #join {
+      background-color:#919090;
+      margin-bottom: 0.4em;
+      padding: 0.4em;
+      margin-top: 0.4em;
+      border-radius: 5px;
+      }
+      #players {
+      margin-bottom: 0.5em;
+      }
+      #player-wrapper {
+      background-color: #d9d9d9;
+      color: black;
+      border-radius: 5px;
+      margin-bottom:0.5em;
+      padding-top: 1px;
+      padding-left: 1em;
+      padding-bottom: 1em;
+      padding-right: 1em;
+      }
+      #roles {
+      background-color: #d9d9d9;
+      color: black;
+      border-radius: 5px;
+      padding-top: 1px;
+      padding-left: 1em;
+      padding-bottom: 1em;
+      padding-right: 1em;
+      }
+      .config {
+      width: 2em;
+      }
+    </style>
   </head>
   <body>
     <h1>One Night Werewolf</h1>
@@ -65,17 +116,30 @@ function refresh (callback) {
     }
 }
 
+function isJSON(str) {
+    try {
+        return (JSON.parse(str) && !!str);
+    } catch (e) {
+        return false;
+    }
+}
+
 function newGame () {
     var name = document.getElementById("name").value;
     requestJSON("newgame/?name=" + name);
     xmlhttp.onreadystatechange = function () {
         if (xmlhttp.readyState == 4) {
-            console.log(xmlhttp.responseText);
-            var info = JSON.parse (xmlhttp.responseText);
-            document.cookie = "name=" + info.name;
-            document.cookie = "id=" + info.id;
-            document.cookie = "game=" + info.game;
-            refresh (tryConstantRefresh);
+            var response = xmlhttp.responseText;
+            console.log(response);
+            if (isJSON(response)) {
+                var info = JSON.parse (xmlhttp.responseText);
+                document.cookie = "name=" + info.name;
+                document.cookie = "id=" + info.id;
+                document.cookie = "game=" + info.game;
+                refresh (tryConstantRefresh);
+            } else {
+                update_content(response);
+            }
         }
     }
 }
@@ -86,11 +150,17 @@ function joinGame () {
     requestJSON("joingame/?name=" + name + "&game=" + code);
     xmlhttp.onreadystatechange = function () {
         if (xmlhttp.readyState == 4) {
-            var info = JSON.parse (xmlhttp.responseText);
-            document.cookie = "name=" + info.name;
-            document.cookie = "id=" + info.id;
-            document.cookie = "game=" + info.game;
-            refresh (tryConstantRefresh);
+            var response = xmlhttp.responseText;
+            console.log(response);
+            if (isJSON(response)) {
+                var info = JSON.parse (response);
+                document.cookie = "name=" + info.name;
+                document.cookie = "id=" + info.id;
+                document.cookie = "game=" + info.game;
+                refresh (tryConstantRefresh);
+            } else {
+                update_content(response);
+            }
         }
     }
 }
@@ -133,7 +203,7 @@ function formatRoles () {
 }
 
 function role_changed () {
-    document.getElementById("saved").innerHTML = "<font color='red'>Unsaved Changes</font>";
+    document.getElementById("saved").innerHTML = "<font color='red'><small>Unsaved Changes</small></font>";
     document.getElementById("save").disabled = false;
     recountRoles();
 }
@@ -151,11 +221,14 @@ function refreshPlayers () {
 
 function saveSettings () {
     var game = getGame();
-    requestHTML ("savesettings/?game=" + game + formatRoles ());
+    var name = getName();
+    var id = getId ();
+    requestHTML ("savesettings/?game=" + game + "&name=" + name + "&id=" + id + formatRoles ());
     xmlhttp.onreadystatechange = function () {
         if (xmlhttp.readyState == 4) {
-            document.getElementById("saved").innerHTML = "<font color='green'>No Unsaved Changes</font>"
+            document.getElementById("saved").innerHTML = "<font color='green'><small>No Unsaved Changes</small></font>"
             document.getElementById("save").disabled = true;
+            console.log(xmlhttp.responseText);
         }
     }
 }

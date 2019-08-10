@@ -1,0 +1,3 @@
+#!/bin/bash
+
+corebuild -use-ocamlfind server.native
