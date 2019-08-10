@@ -1,1 +1,1 @@
-web: ./server.native
+web: sh run.sh
