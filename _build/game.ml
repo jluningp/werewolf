@@ -47,8 +47,8 @@ let player_count game = String.Map.length game.players
 
 let assign_roles game =
   let roles = Config.to_list_dups game.config in
-  let (unassigned, assigned) = List.split_n roles 3 in
-  let pairs = List.zip_exn (String.Map.keys game.players) (assigned) in
+  let (unassigned, assigned) = List.split_n (List.permute roles) 3 in
+  let pairs = List.zip_exn (List.permute (String.Map.keys game.players)) (assigned) in
   let players = List.fold pairs ~init:String.Map.empty ~f:(fun players (name, role) ->
                     match String.Map.find game.players name with
                       None -> failwith "Invariant violated: Role pairing not a valid player"

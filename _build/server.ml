@@ -39,12 +39,8 @@ let test_game =
   { code="TEST"
   ; owner="B"
   ; players = String.Map.of_alist_exn [("B", test_player "B" Role.Troublemaker)
-                                     ; ("C", test_player "C" Role.Werewolf)
-                                     ; ("E", test_player "E" Role.Seer)
-                                     ; ("F", test_player "F" Role.Robber)
                                      ; ("H", test_player "H" Role.Mason)
-                                     ; ("I", test_player "I" Role.Insomniac)
-                                     ; ("J", test_player "J" Role.Villager)]
+                                     ; ("I", test_player "I" Role.Insomniac)]
   ; unassigned=[Role.Villager; Role.Werewolf; Role.Mason]
   ; state=Game.Role
   ; config={
