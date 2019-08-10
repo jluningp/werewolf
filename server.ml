@@ -461,6 +461,16 @@ let see variables =
        | None -> raise (InvalidInput "Invalid or missing targets for seer action.")
   else raise (InvalidInput "You cannot see (or see twice).")
 
+let leave variables =
+  let game = game_exn variables in
+  let player = player_exn variables game in
+  if Player.name player = Game.owner game
+  then String.Table.remove games (Game.code game)
+  else
+    {game with players = String.Map.filter (Game.players game) ~f:(fun p ->
+                             not(Player.name p = Player.name player))}
+    |> update_game
+
 let direct url variables =
   let parts = Str.split (Str.regexp "/+") url in
   printf "%s\n" (List.to_string parts ~f:(fun s -> s));
@@ -479,6 +489,7 @@ let direct url variables =
     | ["rob"] -> rob variables; empty_response
     | ["troublemake"] -> troublemake variables; empty_response
     | ["see"] -> see variables; empty_response
+    | ["leavegame"] -> leave variables; empty_response
     | [] -> index ()
     | _ -> not_found
   with InvalidInput s -> page "pages/start.html" [("error", s)]

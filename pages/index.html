@@ -69,11 +69,21 @@
       border-radius: 5px;
       padding: 1em;
       }
+      #leave {
+      cursor: pointer;
+      color: #a88700;
+      }
+      #leave-box {
+      text-align: right;
+      }
     </style>
   </head>
   <body>
     <h1>One Night Werewolf</h1>
     <div id="content">
+    </div>
+    <div id="leave-box">
+      <a id="leave" onclick="leaveGame()">Leave Game</a>
     </div>
   </body>
 <script>
@@ -178,6 +188,25 @@ function joinGame () {
             } else {
                 update_content(response);
             }
+        }
+    }
+}
+
+function delete_cookie( name ) {
+    document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+}
+
+function leaveGame () {
+    var name = getName ();
+    var code = getGame ();
+    var id = getId ();
+    requestHTML("leavegame/?name=" + name + "&game=" + code + "&id=" + id);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            delete_cookie("game");
+            delete_cookie("name");
+            delete_cookie("id");
+            location.reload();
         }
     }
 }
