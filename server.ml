@@ -52,9 +52,11 @@ let index () =
   let%map page = Reader.file_contents "pages/index.html" in
   Http.response Http.Ok ~content:page ~content_type:"text/html"
 
-let favicon =
-  let%map image = Reader.file_contents "images/favicon.jpg" in
-  Http.response Http.Ok ~content:image ~content_type:"image/jpg"
+let image img ~extension =
+  let%map image = Reader.file_contents ("images/" ^ img) in
+  Http.response Http.Ok ~content:image ~content_type:("image/" ^ extension)
+
+let favicon = image "favicon.jpg" ~extension:"jpg"
 
 let empty_response = html ~content:""
 
@@ -131,14 +133,14 @@ let player_choice game player =
   |> Game.players
   |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
   |> display_players ~wrap:(fun p ->
-         "<input type='radio' id='" ^ p ^ "'>" ^ p ^ "<br>")
+         "<input type='radio' id='" ^ p ^ "'>&nbsp;&nbsp;" ^ p ^ "<br>")
 
 let player_choices game player =
   game
   |> Game.players
   |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
   |> display_players ~wrap:(fun p ->
-         "<input type='checkbox' id='" ^ p ^ "'>" ^ p ^ "<br>")
+         "<input type='checkbox' id='" ^ p ^ "'>&nbsp;&nbsp;'>" ^ p ^ "<br>")
 
 let update_state game =
   match Game.state game with
@@ -163,7 +165,7 @@ let role_page game player =
   let conditional_element =
     if Player.name player = Game.owner game
     then "<button onclick='beginNight()' id='night'>Begin Night!</button>"
-    else "<input type='hidden' id='view_role'>"
+    else "Waiting for owner to begin game.<input type='hidden' id='view_role'>"
   in
   page "pages/role.html" [("role", Role.to_string (Player.evening_role player))
                         ; ("button", conditional_element)]
@@ -194,6 +196,12 @@ let mason_see_others game player masons =
                                            Action.player_or_center=mason})) in
   Game.set_player game player |> update_game
 
+let mason_alone game player =
+  player
+  |> Player.add_action ~action:Action.ViewLoneMason
+  |> Game.set_player game
+  |> update_game
+
 let insomniac_see_self game player =
   player
   |> Player.add_action ~action:(Action.View {card=Player.morning_role player
@@ -203,16 +211,26 @@ let insomniac_see_self game player =
 
 let werewolf_page game player =
   match other_werewolves game player with
-    [] -> let card = werewolf_see_center game player in
-          page "pages/lone_werewolf.html" [("card", Role.to_string card)]
-  | wolves -> werewolf_see_others game player wolves;
+    [] -> (match Player.views player with
+             [] -> let card = werewolf_see_center game player in
+                   page "pages/lone_werewolf.html" [("card", Role.to_string card)]
+           | [card] -> page "pages/lone_werewolf.html" [("card", Role.to_string card.Action.card)]
+           | _ -> failwith "Broken invariant: lone werewolf saw multiple cards")
+  | wolves -> (match Player.views player with
+                 [] -> werewolf_see_others game player wolves
+               | _ -> ());
               let wolf_list = String.concat ~sep:"<br>" wolves in
               page "pages/werewolves.html" [("names", wolf_list)]
 
 let mason_page game player =
   match other_masons game player with
-    [] -> page "pages/lone_mason.html" []
-  | masons -> mason_see_others game player masons;
+    [] -> (match Player.views player with
+             [] -> mason_alone game player
+           | _ -> ());
+          page "pages/lone_mason.html" []
+  | masons -> (match Player.views player with
+                 [] -> mason_see_others game player masons
+               | _ -> ());
               let mason_list = String.concat ~sep:"<br>" masons in
               page "pages/masons.html" [("names", mason_list)]
 
@@ -247,7 +265,9 @@ let villager_page game player =
  page "pages/wait.html" []
 
 let insomniac_page game player =
-  insomniac_see_self game player;
+  (match Player.views player with
+     [] -> insomniac_see_self game player
+   |  _ -> ());
   if Role.equal (Player.evening_role player) (Player.morning_role player)
   then page "pages/insomniac_same.html" []
   else page "pages/insomniac_change.html" [("role", Role.to_string (Player.morning_role player))]
@@ -277,10 +297,11 @@ let morning_page game player =
 let debate_page player =
   let actions = String.concat
                   ~sep:"<br>"
-                  (List.filter_map (Player.log player) ~f:(function
+                  (List.filter_map (List.rev (Player.log player)) ~f:(function
                          Action.Ready -> None
                        | action -> Some (Action.to_string ~me:player.name action))) in
-  page "pages/debate.html" [("actions", actions)]
+  page "pages/debate.html" [("actions", actions)
+                           ; ("original", Role.to_string (Player.evening_role player))]
 
 let current_page old_game player =
   let game = update_state old_game in
@@ -452,6 +473,7 @@ let direct url variables =
     | ["startgame"] -> start_game variables; refresh variables
     | ["beginnight"] -> begin_night variables; empty_response
     | ["favicon.ico"] -> favicon
+    | ["images"; img] -> image img ~extension:"png"
     | ["players"] -> players variables
     | ["ready"] -> ready variables; empty_response
     | ["rob"] -> rob variables; empty_response

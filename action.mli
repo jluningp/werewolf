@@ -4,6 +4,7 @@ type view = {
   }
 
 type t = View of view
+       | ViewLoneMason
        | Swap of string * string
        | Ready
 

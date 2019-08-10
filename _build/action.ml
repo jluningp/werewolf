@@ -6,6 +6,7 @@ type view = {
   }
 
 type t = View of view
+       | ViewLoneMason
        | Swap of string * string
        | Ready
 
@@ -22,4 +23,5 @@ let to_string action ~me =
          then sprintf "Viewed that you were the %s." (Role.to_string card)
          else sprintf "Viewed that %s was the %s." player (Role.to_string card))
   | Swap (card1, card2) -> sprintf "Swapped %s with %s" (selfify me card1) (selfify me card2)
-  | Ready -> sprintf "Ready"
+  | Ready -> "Ready"
+  | ViewLoneMason -> "Viewed that you were the lone mason."
