@@ -164,7 +164,7 @@ let player_choice game player =
   |> Game.players
   |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
   |> display_players ~wrap:(fun p ->
-         "<input type='radio' id='" ^ p ^ "'>&nbsp;&nbsp;" ^ p ^ "<br>")
+         "<input type='radio' name='playerchoice' id='" ^ p ^ "'>&nbsp;&nbsp;" ^ p ^ "<br>")
 
 let player_choices game player =
   game
