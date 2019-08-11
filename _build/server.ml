@@ -303,12 +303,21 @@ let villager_page game player =
        |> update_game);
  page "pages/wait.html" []
 
+let double_check_insomniac game player =
+  let name = Player.name player in
+  String.Map.for_all (Game.players game) ~f:(fun p ->
+      match Player.swap p with
+        None -> true
+      | Some (p1, p2) -> not((p1 = name) || (p2 = name)))
+
 let insomniac_page game player =
   (match Player.views player with
      [] -> insomniac_see_self game player
    |  _ -> ());
   if Role.equal (Player.evening_role player) (Player.morning_role player)
-  then page "pages/insomniac_same.html" []
+  then if double_check_insomniac game player
+       then page "pages/insomniac_same.html" []
+       else failwith "Game failed to make insomniac swap correctly."
   else page "pages/insomniac_change.html" [("role", Role.to_string (Player.morning_role player))]
 
 let night_page game player =
