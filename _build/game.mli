@@ -1,10 +1,18 @@
 open Core
 
+type results = {
+    winner : Role.Team.t
+  ; voted_for : Action.vote
+  ; votes : int String.Map.t
+  }
+
 type state = Config
            | Role
            | Night
            | Morning (* Insomniac's turn *)
            | Debate
+           | Vote
+           | Results of results
 
 
 type t = {
@@ -31,3 +39,5 @@ val set_state : t -> state -> t
 val make_moves : t -> t
 
 val is_player : t -> string -> bool
+
+val cast_votes : t -> results

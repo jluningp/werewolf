@@ -1,1 +1,1 @@
-game.mli: Config Core Fieldslib Player Role String
+game.mli: Action Config Core Fieldslib Player Role String

@@ -1,5 +1,7 @@
 type t = {
     werewolf : int
+  ; tanner : int
+  ; minion : int
   ; seer : bool
   ; robber : bool
   ; villager : int

@@ -1,10 +1,18 @@
 open Core
 
+type results = {
+    winner : Role.Team.t
+  ; voted_for : Action.vote
+  ; votes : int String.Map.t
+  }
+
 type state = Config
            | Role
            | Night
            | Morning (* Insomniac's turn *)
            | Debate
+           | Vote
+           | Results of results
 
 
 type t = {
@@ -119,3 +127,52 @@ let check_swaps game =
 
 let make_moves game =
   game |> make_swap Role.Robber |> make_swap Role.Troublemaker
+
+let winner game voted_for =
+  let no_werewolves = String.Map.for_all game.players ~f:(fun p ->
+                          not(Role.equal (Player.morning_role p) Role.Werewolf)) in
+  let minion = String.Map.exists game.players ~f:(fun p ->
+                   Role.equal (Player.morning_role p) Role.Minion) in
+  match voted_for with
+    Action.Center -> if no_werewolves
+                     then Role.Team.Villagers
+                     else Role.Team.Werewolves
+  | Action.Player p -> match Player.morning_role (String.Map.find_exn game.players p) with
+                         Role.Werewolf -> Role.Team.Villagers
+                       | Role.Tanner -> Role.Team.Tanner
+                       | Role.Minion -> if no_werewolves
+                                        then Role.Team.NoOne
+                                        else Role.Team.Werewolves
+                       | _ -> if no_werewolves
+                              then (if minion
+                                    then Role.Team.Werewolves
+                                    else Role.Team.NoOne)
+                              else Role.Team.Werewolves
+
+let cast_votes game =
+  let tally =
+    String.Map.fold game.players ~init:String.Map.empty ~f:(fun ~key:_ ~data acc ->
+        let vote = Option.value_exn (Player.vote data) in
+        let str = (match vote with
+                     Action.Center -> "No Werewolf"
+                   | Action.Player player -> player) in
+        String.Map.update acc str ~f:(function
+              None -> 1
+            | Some n -> n + 1))
+  in
+  let (voted_for, votes) = String.Map.fold tally ~init:("", 0) ~f:(fun ~key ~data (name, n) ->
+                               if data > n
+                               then (key, data)
+                               else (name, n))
+  in
+  let break_tie = match String.Map.keys (String.Map.filter tally ~f:(fun d -> d = votes)) with
+      [] -> Action.Center
+    | _ -> (match voted_for with
+              "No Werewolf" -> Action.Center
+            | p -> Action.Player p)
+  in
+  let winner = winner game break_tie
+  in
+  { winner
+  ; voted_for=break_tie
+  ; votes=tally }

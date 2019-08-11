@@ -79,6 +79,18 @@
       .seer {
       width: 45%;
       }
+      .two {
+      width: 95%;
+      }
+      .wrapper {
+      display: flex;
+      }
+      .left {
+      flex: 0 0 50%
+      }
+      .right {
+      flex: 1
+      }
     </style>
   </head>
   <body>
@@ -227,6 +239,8 @@ function recountRoles () {
     if (roleNum && rolesNeeded) {
         var players = document.getElementsByClassName("player").length;
         var roles = (parseInt(document.getElementById("werewolves").value)
+                     + parseInt(document.getElementById("tanners").value)
+                     + parseInt(document.getElementById("minions").value)
                      + parseInt(document.getElementById("robbers").value)
                      + parseInt(document.getElementById("troublemakers").value)
                      + parseInt(document.getElementById("seers").value)
@@ -249,7 +263,11 @@ function formatRoles () {
     var i = document.getElementById("insomniacs").value
     var m = document.getElementById("masons").value
     var v = document.getElementById("villagers").value
+    var ta = document.getElementById("tanners").value;
+    var mi = document.getElementById("minions").value;
     return ("&werewolves=" + ww +
+            "&tanners=" + ta +
+            "&minions=" + mi +
             "&robbers=" + r +
             "&troublemakers=" + t +
             "&seers=" + s +
@@ -405,6 +423,47 @@ function ok () {
         }
     }
 }
+
+function voteReady () {
+    var game = getGame ();
+    var name = getName ();
+    var id = getId ();
+    requestHTML ("voteready/?game=" + game + "&name=" + name + "&id=" + id);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            refresh(tryConstantRefresh);
+        }
+    }
+}
+
+function vote () {
+    var checked = false;
+    var radios = document.getElementsByTagName("input");
+    for (var i = 0; i < radios.length; i++) {
+        var radio = radios[i];
+        if (radio.type == "radio") {
+            if (radio.checked) {
+                var target = radio.id;
+                var game = getGame ();
+                var name = getName ();
+                var id = getId ();
+                checked = true;
+                requestHTML ("vote/?game=" + game + "&name=" + name + "&id=" + id + "&vote=" + target);
+                xmlhttp.onreadystatechange = function () {
+                    if (xmlhttp.readyState == 4) {
+                        refresh(tryConstantRefresh);
+                    }
+                }
+                return;
+            }
+        }
+    }
+    if (!checked) {
+        console.log("Must select vote.");
+        return;
+    }
+}
+
 
 function readCookie(name) {
     var nameEQ = name + "=";

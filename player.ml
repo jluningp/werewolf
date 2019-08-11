@@ -25,11 +25,23 @@ let is_ready player =
         Action.Ready -> true
       | _ -> false)
 
+let is_vote_ready player =
+  List.exists player.log ~f:(function
+        Action.VoteReady -> true
+      | _ -> false)
+
+let vote player =
+  List.find_map player.log ~f:(function
+        Action.Vote vote -> Some vote
+      | _ -> None)
+
 let views player =
   List.filter_map player.log ~f:(function
         Action.View view -> Some view
       | Action.ViewLoneMason -> Some {Action.card=Role.Mason
                                     ; Action.player_or_center=player.name}
+      | Action.ViewNoWerewolves -> Some {Action.card=Role.Minion
+                                       ; Action.player_or_center=player.name}
       | _ -> None)
 
 let swap player =

@@ -38,19 +38,21 @@ let test_game =
   let open Game in
   { code="TEST"
   ; owner="B"
-  ; players = String.Map.of_alist_exn [("B", test_player "B" Role.Troublemaker)
+  ; players = String.Map.of_alist_exn [("B", test_player "B" Role.Robber)
                                      ; ("H", test_player "H" Role.Mason)
                                      ; ("I", test_player "I" Role.Insomniac)]
   ; unassigned=[Role.Villager; Role.Werewolf; Role.Mason]
   ; state=Game.Role
   ; config={
-      werewolf=1
-    ; seer=true
+      werewolf=0
+    ; seer=false
     ; robber=true
     ; villager=1
-    ; troublemaker=true
+    ; troublemaker=false
     ; mason=2
     ; insomniac=1
+    ; tanner=0
+    ; minion=0
     }
   }
 
@@ -159,10 +161,10 @@ let other_masons game player =
                                     && Player.name p <> Player.name player)
   |> String.Map.keys
 
-let player_choice game player =
+let player_choice ?(keep_self=false) game player =
   game
   |> Game.players
-  |> String.Map.filter ~f:(fun p -> Player.name p <> Player.name player)
+  |> String.Map.filter ~f:(fun p -> keep_self || (Player.name p <> Player.name player))
   |> display_players ~wrap:(fun p ->
          "<input type='radio' name='playerchoice' id='" ^ p ^ "'>&nbsp;&nbsp;" ^ p ^ "<br>")
 
@@ -186,6 +188,13 @@ let update_state game =
   | Game.Morning -> if String.Map.for_all game.players ~f:Player.is_ready
                     then Game.set_state game Game.Debate
                     else game
+  | Game.Debate -> if String.Map.for_all game.players ~f:Player.is_vote_ready
+                   then Game.set_state game Game.Vote
+                   else game
+  | Game.Vote -> if String.Map.for_all game.players ~f:(fun p ->
+                        Option.is_some (Player.vote p))
+                 then Game.set_state game (Game.Results (Game.cast_votes game))
+                 else game
   | _ -> game
 
 
@@ -294,7 +303,7 @@ let troublemaker_page game player =
     None -> page "pages/troublemaker.html" [("players", player_choices game player)]
   | Some _ -> page "pages/wait.html" []
 
-let villager_page game player =
+let no_action_page game player =
  (if Player.is_ready player
   then ()
   else player
@@ -320,17 +329,54 @@ let insomniac_page game player =
        else failwith "Game failed to make insomniac swap correctly."
   else page "pages/insomniac_change.html" [("role", Role.to_string (Player.morning_role player))]
 
+let all_werewolves game =
+  String.Map.keys
+    (String.Map.filter (Game.players game) ~f:(fun p ->
+         Role.equal (Player.evening_role p) Role.Werewolf))
+
+
+let minion_see_werewolves game player werewolves =
+  let player = List.fold werewolves ~init:player ~f:(fun p werewolf ->
+                   Player.add_action
+                     p
+                     ~action:(Action.View {card=Role.Werewolf;
+                                           Action.player_or_center=werewolf})) in
+  Game.set_player game player |> update_game
+
+let minion_no_werewolves game player =
+  player
+  |> Player.add_action ~action:Action.ViewNoWerewolves
+  |> Game.set_player game
+  |> update_game
+
+
+let minion_page game player =
+  match all_werewolves game with
+    [] -> (match Player.views player with
+             [] -> minion_no_werewolves game player
+           | _ -> ());
+          page "pages/minion_no_werewolves.html" []
+  | werewolves -> (match Player.views player with
+                     [] -> minion_see_werewolves game player werewolves
+                   | _ -> ());
+                  let ww_list = sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                                                         (List.map werewolves ~f:(fun s ->
+                                                              sprintf "<li>%s</li>" s))) in
+                  page "pages/minion_see_werewolves.html" [("names", ww_list)]
+
 let night_page game player =
   if Player.is_ready player
   then page "pages/wait.html" []
   else
     match player.evening_role with
       Role.Werewolf -> werewolf_page game player
+    | Role.Tanner -> no_action_page game player
+    | Role.Minion -> minion_page game player
     | Role.Mason -> mason_page game player
     | Role.Seer -> seer_page game player
     | Role.Robber -> robber_page game player
     | Role.Troublemaker -> troublemaker_page game player
-    | Role.Villager -> villager_page game player
+    | Role.Villager -> no_action_page game player
     | Role.Insomniac -> page "pages/wait.html" []
     | Role.Unassigned -> failwith "Invariant violation: A player was not assigned a role"
 
@@ -342,15 +388,58 @@ let morning_page game player =
       Role.Insomniac -> insomniac_page game player
     | _ -> page "pages/wait_morning.html" []
 
-let debate_page player =
+let action_list ?(third_person=false) player =
   let acts = List.filter_map (List.rev (Player.log player)) ~f:(function
                    Action.Ready -> None
-                 | action -> Some (Action.to_string ~me:player.name action)) in
-  let actions = sprintf "<ul>%s</ul>" (String.concat ~sep:""
-                                         (List.map acts ~f:(fun s ->
-                                              sprintf "<li>%s</li>" s))) in
-  page "pages/debate.html" [("actions", actions)
-                          ; ("original", Role.to_string (Player.evening_role player))]
+                 | Action.VoteReady -> None
+                 | action -> Some (Action.to_string
+                                     ~third_person
+                                     ~me:(Player.name player)
+                                     action)) in
+  sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                           (List.map acts ~f:(fun s ->
+                                sprintf "<li>%s</li>" s)))
+
+
+let debate_page player =
+  match Player.is_vote_ready player with
+    false -> page "pages/debate.html" [("actions", action_list player)
+                                    ; ("original", Role.to_string (Player.evening_role player))]
+  | true -> page "pages/wait.html" []
+
+let vote_page game player =
+  match Player.vote player with
+    None -> page "pages/vote.html" [("players", player_choice ~keep_self:true game player)]
+  | Some _ -> page "pages/wait.html" []
+
+let results_page game player results =
+  let%bind result_template = Reader.file_contents "pages/player_result.html" in
+  let all_players = (String.Map.filter_map (Game.players game) ~f:(fun p ->
+                         Option.some_if (not(Player.name p = Player.name player))
+                           (Page.process result_template
+                              [("player", Player.name p)
+                              ; ("original", Role.to_string (Player.evening_role p))
+                              ; ("new", Role.to_string (Player.morning_role p))
+                              ; ("actions", action_list ~third_person:true p)])))
+                    |> String.Map.data
+                    |> String.concat ~sep:"\n"
+  in
+  let result = if Role.Team.equal (results.Game.winner) (Role.team (Player.morning_role player))
+               then "won"
+               else "lost"
+  in
+  let votes = String.Map.to_alist results.Game.votes
+              |> List.map ~f:(fun (name, n) -> sprintf "%s: %i" name n)
+              |> String.concat ~sep:"<br>"
+  in
+  page "pages/results.html" [("result", result)
+                           ; ("winner", Role.Team.to_string results.Game.winner)
+                           ; ("votes", votes)
+                           ; ("original", Role.to_string (Player.evening_role player))
+                           ; ("new", Role.to_string (Player.morning_role player))
+                           ; ("player_results", all_players)
+                           ; ("actions", action_list player)]
+
 
 let current_page old_game player =
   let game = update_state old_game in
@@ -361,6 +450,8 @@ let current_page old_game player =
   | Night ->  night_page game player
   | Morning -> morning_page game player
   | Debate -> debate_page player
+  | Vote -> vote_page game player
+  | Results r -> results_page game player r
 
 let player_section game =
   sprintf "%s<hr><span id=\"playerNum\">%i</span> Players<br>"
@@ -422,6 +513,8 @@ let update_config variables =
     let open Option in
     Config.empty
     |> Config.update ~role:Role.Werewolf ~count:(config_exn variables "werewolves")
+    >>= (Config.update ~role:Role.Tanner ~count:(config_exn variables "tanners"))
+    >>= (Config.update ~role:Role.Minion ~count:(config_exn variables "minions"))
     >>= (Config.update ~role:Role.Robber ~count:(config_exn variables "robbers"))
     >>= (Config.update ~role:Role.Troublemaker ~count:(config_exn variables "troublemakers"))
     >>= (Config.update ~role:Role.Seer ~count:(config_exn variables "seers"))
@@ -523,6 +616,34 @@ let leave variables =
                              not(Player.name p = Player.name player))}
     |> update_game
 
+
+let vote_ready variables =
+  let game = game_exn variables in
+  let player = player_exn variables game in
+  player
+  |> Player.add_action ~action:Action.VoteReady
+  |> Game.set_player game
+  |> update_game
+
+let vote variables =
+  let game = game_exn variables in
+  let player = player_exn variables game in
+  match String.Map.find variables "vote" with
+    None -> raise (InvalidInput "No vote selected.")
+  | Some name ->
+     let voteCast =
+       if Game.is_player game name
+       then Action.Player name
+       else if name = "center"
+       then Action.Center
+       else raise (InvalidInput "Vote invalid. Vote for a player or no werewolf.")
+     in
+     player
+     |> Player.add_action ~action:(Action.Vote voteCast)
+     |> Game.set_player game
+     |> update_game
+
+
 let direct url variables =
   let parts = Str.split (Str.regexp "/+") url in
   printf "%s\n" (List.to_string parts ~f:(fun s -> s));
@@ -542,6 +663,8 @@ let direct url variables =
     | ["troublemake"] -> troublemake variables; empty_response
     | ["see"] -> see variables; empty_response
     | ["leavegame"] -> leave variables; empty_response
+    | ["voteready"] -> vote_ready variables; empty_response
+    | ["vote"] -> vote variables; empty_response
     | [] -> index ()
     | _ -> not_found
   with InvalidInput s -> (printf "Error: %s \n" s; page "pages/start.html" [("error", s)])
