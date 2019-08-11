@@ -60,7 +60,7 @@ ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot
 # Target: game.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:game.cmx, file:game.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
 ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o game.cmx game.ml
 # Target: server.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:server.cmx, file:server.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
-ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o server.cmx server.ml # cached
+ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o server.cmx server.ml
 # Target: server.native, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, dont_link_with, extension:native, file:server.native, link, native, ocaml, program, quiet, short_paths, thread, traverse }
 ocamlfind ocamlopt -linkpkg -g -thread -package async -package str -package core role.cmx action.cmx cards.cmx config.cmx player.cmx game.cmx http.cmx server.cmx -o server.native
 # Compilation successful.

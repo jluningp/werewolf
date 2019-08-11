@@ -174,11 +174,15 @@ let player_choices game player =
          "<input type='checkbox' id='" ^ p ^ "'>&nbsp;&nbsp;" ^ p ^ "<br>")
 
 let update_state game =
+  let readies = String.Map.filter (Game.players game) ~f:(fun p ->
+                    not(Player.is_ready p)) in
   match Game.state game with
     Game.Night -> if String.Map.for_all game.players ~f:(fun p ->
                          Player.is_ready p || Role.equal (Player.evening_role p) Role.Insomniac)
-                  then Game.set_state game Game.Morning |> Game.make_moves
-                  else game
+                  then (printf "Making moves\n"; Game.set_state game Game.Morning |> Game.make_moves)
+                  else (printf "Not ready: %s\n"
+                          (List.to_string (String.Map.keys readies) ~f:(fun i -> i));
+                        game)
   | Game.Morning -> if String.Map.for_all game.players ~f:Player.is_ready
                     then Game.set_state game Game.Debate
                     else game
@@ -345,7 +349,7 @@ let current_page old_game player =
   match game.state with
     Config -> config_page game player
   | Role -> role_page game player
-  | Night -> night_page game player
+  | Night ->  night_page game player
   | Morning -> morning_page game player
   | Debate -> debate_page player
 
@@ -421,9 +425,11 @@ let update_config variables =
   | Some config -> {game with config}
 
 let start_game variables =
-  update_config variables
-  |> Game.assign_roles
-  |> update_game
+  try
+    update_config variables
+    |> Game.assign_roles
+    |> update_game
+  with _ -> raise (InvalidInput "Wrong number of roles for players.")
 
 let begin_night variables =
   let game = game_exn variables in
@@ -529,7 +535,7 @@ let direct url variables =
     | ["leavegame"] -> leave variables; empty_response
     | [] -> index ()
     | _ -> not_found
-  with InvalidInput s -> page "pages/start.html" [("error", s)]
+  with InvalidInput s -> (printf "Error: %s \n" s; page "pages/start.html" [("error", s)])
 
 let run port () =
   let%bind server =

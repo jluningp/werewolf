@@ -65,26 +65,57 @@ let set2 m (k1, d1) (k2, d2) =
   String.Map.set (String.Map.set m ~key:k1 ~data:d1) ~key:k2 ~data:d2
 
 let make_swap role game =
+  printf "We're actually doing the make swap\n";
   let actors = game.players
                |> String.Map.filter ~f:(fun p -> Role.equal (Player.evening_role p) role)
                |> String.Map.data
   in
   match actors with
-    [] -> game
-  | [swapper] -> (let swapped = begin
-                      let open Option.Let_syntax in
-                      let%bind (p1, p2) = Player.swap swapper in
-                      let%bind player1 = String.Map.find game.players p1 in
-                      let%map player2 = String.Map.find game.players p2 in
-                      set2 game.players
-                        (p1, Player.update_role player1 player2.morning_role)
-                        (p2, Player.update_role player2 player1.morning_role)
-                    end
-                  in match swapped with
-                       Some players -> {game with players}
-                     | None -> failwith ("Invariant violated: " ^ Role.to_string role
-                                         ^  " swapped nonexistant player or did not make a swap."))
+    [] -> ((printf "Make swap did not occur because there is no %s\n" (Role.to_string role)); Out_channel.flush stdout; game)
+  | [swapper] ->
+     (let swapped = begin
+          let open Option.Let_syntax in
+          let%bind (p1, p2) = Player.swap swapper in
+          printf "Swapped %s and %s\n" p1 p2;
+          Out_channel.flush stdout;
+          let%bind player1 = String.Map.find game.players p1 in
+          let%map player2 = String.Map.find game.players p2 in
+          set2 game.players
+            (p1, Player.update_role player1 player2.morning_role)
+            (p2, Player.update_role player2 player1.morning_role)
+        end
+      in match swapped with
+           Some players -> {game with players}
+         | None -> failwith ("Invariant violated: " ^ Role.to_string role
+                             ^  " swapped nonexistant player or did not make a swap."))
   | _ -> failwith ("Invariant violated. More than one " ^ Role.to_string role ^ " in the game.")
+
+(*
+let get_player game player =
+  String.Map.find_exn game.players player
+
+let check_swaps game =
+  let swapped = String.Map.filter game.players ~f:(fun p ->
+                    not(Role.equal (Player.evening_role p) (Player.morning_role p))) in
+  let swaps = List.filter_map (String.Map.data game.players) ~f:(fun p ->
+                  Option.map (Player.swap p) ~f:(fun (p1, p2) ->
+                      (Player.evening_role p, p1, p2))) in
+  printf "Made swaps:%s\n" (List.to_string swaps ~f:(fun (p1, p2) -> sprintf "(%s, %s)" p1 p2));
+  printf "Roles changed:%s\n" (List.to_string swapped ~f:Player.name);
+  match swaps with
+    [(Role.Robber, p1, p2)] -> (let player1 = get_player p1 in
+                                let player2 = get_player p2 in
+                                if Player.morning_role player1 = Player.evening_role player2
+                                   && Player.morning_role player2 = Player.evening_role player1
+                                then printf "Roles correctly swapped when there is only a robber.\n"
+                                else
+                                  printf "Roles Incorrect: P1: %s %s\n P2: %s %s\n"
+                                    (Player.evening_role player1)
+                                    (Player.morning_role player1)
+                                    (Player.evening_role player2)
+                                    (Player.morning_role player2))
+  |
+ *)
 
 let make_moves game =
   game |> make_swap Role.Robber |> make_swap Role.Troublemaker
