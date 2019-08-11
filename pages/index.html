@@ -7,6 +7,7 @@
       body {
       background-color: black;
       color: white;
+      font-family: Futura,Trebuchet MS,Arial,sans-serif;
       }
       #content {
       background-color: gray;
@@ -94,7 +95,7 @@
     </style>
   </head>
   <body>
-    <h1>One Night Werewolf</h1>
+    <h1>ONE NIGHT WEREWOLF</h1>
     <div id="content">
     </div>
     <div id="leave-box">
@@ -233,6 +234,22 @@ function leaveGame () {
     }
 }
 
+function boolInt (value) {
+    if (value) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+function boolIntStr (value) {
+    if (value) {
+        return "1";
+    } else {
+        return "0";
+    }
+}
+
 function recountRoles () {
     var roleNum = document.getElementById("roleNum");
     var rolesNeeded = document.getElementById("rolesNeeded");
@@ -241,9 +258,9 @@ function recountRoles () {
         var roles = (parseInt(document.getElementById("werewolves").value)
                      + parseInt(document.getElementById("tanners").value)
                      + parseInt(document.getElementById("minions").value)
-                     + parseInt(document.getElementById("robbers").value)
-                     + parseInt(document.getElementById("troublemakers").value)
-                     + parseInt(document.getElementById("seers").value)
+                     + boolInt(document.getElementById("robbers").checked)
+                     + boolInt(document.getElementById("troublemakers").checked)
+                     + boolInt(document.getElementById("seers").checked)
                      + parseInt(document.getElementById("insomniacs").value)
                      + parseInt(document.getElementById("masons").value)
                      + parseInt(document.getElementById("villagers").value))
@@ -257,9 +274,9 @@ function recountRoles () {
 
 function formatRoles () {
     var ww = document.getElementById("werewolves").value;
-    var r = document.getElementById("robbers").value
-    var t = document.getElementById("troublemakers").value
-    var s = document.getElementById("seers").value
+    var r = boolIntStr(document.getElementById("robbers").checked);
+    var t = boolIntStr(document.getElementById("troublemakers").checked);
+    var s = boolIntStr(document.getElementById("seers").checked);
     var i = document.getElementById("insomniacs").value
     var m = document.getElementById("masons").value
     var v = document.getElementById("villagers").value

@@ -132,11 +132,22 @@ let display_players players ~wrap =
   |> List.map ~f:wrap
   |> String.concat ~sep:""
 
-let config_info game =
+let int_to_checkbox i =
+  match i with
+    0 -> ""
+  | _ -> "checked"
+
+let config_info ?(edit=false) game =
   let player_count = Game.player_count game in
   let role_count = Config.count game.config in
   let roles = List.map (Config.to_alist game.config) ~f:(fun (role, count) ->
-                  (Role.to_string_plural role, Int.to_string count)) in
+                  (Role.to_string_plural role,
+                   match role with
+                     (Role.Troublemaker | Role.Robber | Role.Seer) ->
+                      if edit
+                      then int_to_checkbox count
+                      else Int.to_string count
+                   | _ -> Int.to_string count)) in
   let players = display_players game.players ~wrap:(fun p ->
                     "<span class='player'>" ^ p ^ "</span><br>")
   in
@@ -203,7 +214,7 @@ let config_page game player =
                          then "pages/config.html"
                          else "pages/config_view.html"
   in
-  page conditional_page (config_info game)
+  page conditional_page (config_info ~edit:(Player.name player = Game.owner game) game)
 
 let role_page game player =
   let conditional_element =
@@ -396,9 +407,11 @@ let action_list ?(third_person=false) player =
                                      ~third_person
                                      ~me:(Player.name player)
                                      action)) in
-  sprintf "<ul>%s</ul>" (String.concat ~sep:""
-                           (List.map acts ~f:(fun s ->
-                                sprintf "<li>%s</li>" s)))
+  if List.is_empty acts
+  then " did nothing during the night."
+  else sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                                (List.map acts ~f:(fun s ->
+                                     sprintf "<li>%s</li>" s)))
 
 
 let debate_page player =
