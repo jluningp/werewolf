@@ -45,6 +45,7 @@ let test_game =
   ; state=Game.Role
   ; config={
       werewolf=0
+    ; dream_wolf=0
     ; seer=false
     ; robber=true
     ; villager=1
@@ -165,6 +166,12 @@ let other_werewolves game player =
                                     && (Player.name p <> Player.name player))
   |> String.Map.keys
 
+let dream_wolves game =
+  game
+  |> Game.players
+  |> String.Map.filter ~f:(fun p -> Role.equal (Player.evening_role p) Role.DreamWolf)
+  |> String.Map.keys
+
 let other_masons game player =
   game
   |> Game.players
@@ -222,7 +229,7 @@ let role_page game player =
     then "<button onclick='beginNight()' id='night'>Begin Night!</button>"
     else "Waiting for owner to begin game.<input type='hidden' id='view_role'>"
   in
-  page "pages/role.html" [("role", Role.to_string (Player.evening_role player))
+  page "pages/role.html" [("role", Role.to_string_plural (Player.evening_role player))
                         ; ("button", conditional_element)]
 
 
@@ -234,11 +241,16 @@ let werewolf_see_center game player =
    |> update_game);
   card
 
-let werewolf_see_others game player wolves =
+let werewolf_see_others game player wolves dream_wolves =
   let player = List.fold wolves ~init:player ~f:(fun p wolf ->
                    Player.add_action
                      p
                      ~action:(Action.View {card=Role.Werewolf;
+                                           Action.player_or_center=wolf})) in
+  let player = List.fold dream_wolves ~init:player ~f:(fun p wolf ->
+                   Player.add_action
+                     p
+                     ~action:(Action.View {card=Role.DreamWolf;
                                            Action.player_or_center=wolf})) in
   Game.set_player game player |> update_game
 
@@ -265,19 +277,27 @@ let insomniac_see_self game player =
   |> update_game
 
 let werewolf_page game player =
-  match other_werewolves game player with
-    [] -> (match Player.views player with
-             [] -> let card = werewolf_see_center game player in
-                   page "pages/lone_werewolf.html" [("card", Role.to_string card)]
-           | [card] -> page "pages/lone_werewolf.html" [("card", Role.to_string card.Action.card)]
-           | _ -> failwith "Broken invariant: lone werewolf saw multiple cards")
-  | wolves -> (match Player.views player with
-                 [] -> werewolf_see_others game player wolves
-               | _ -> ());
-              let wolf_list = sprintf "<ul>%s</ul>" (String.concat ~sep:""
-                                                       (List.map wolves ~f:(fun s ->
-                                                            sprintf "<li>%s</li>" s))) in
-              page "pages/werewolves.html" [("names", wolf_list)]
+  match other_werewolves game player, dream_wolves game with
+    ([], []) -> (match Player.views player with
+                   [] -> let card = werewolf_see_center game player in
+                         page "pages/lone_werewolf.html" [("card", Role.to_string_plural card)]
+                 | [card] -> page "pages/lone_werewolf.html" [("card", Role.to_string_plural card.Action.card)]
+                 | _ -> failwith "Broken invariant: lone werewolf saw multiple cards")
+  | (wolves, dream_wolves) ->
+     (match Player.views player with
+        [] -> werewolf_see_others game player wolves dream_wolves
+      | _ -> ());
+     let wolf_list = sprintf "<ul>%s</ul>" (String.concat ~sep:""
+                                              (List.map wolves ~f:(fun s ->
+                                                   sprintf "<li>%s</li>" s))) in
+     let maybe_dream_wolf_list =
+       if List.is_empty dream_wolves
+       then ""
+       else sprintf "<center><large><strong>Dream Wolves</strong></large></center><ul>%s</ul>"
+              (String.concat ~sep:""
+                 (List.map dream_wolves ~f:(fun s ->
+                      sprintf "<li>%s</li>" s))) in
+     page "pages/werewolves.html" [("names", wolf_list); ("dream_wolves", maybe_dream_wolf_list)]
 
 let mason_page game player =
   match other_masons game player with
@@ -298,16 +318,16 @@ let seer_page game player =
     [] -> page "pages/seer.html" [("players", player_choice game player)]
   | [{card; player_or_center}] -> page "pages/seer_reveal_player.html"
                                     [("name", player_or_center)
-                                    ; ("role", Role.to_string card)]
+                                    ; ("role", Role.to_string_plural card)]
   | [card1; card2] -> page "pages/seer_reveal_center.html"
-                        [("role1", Role.to_string card1.Action.card)
-                        ; ("role2", Role.to_string card2.Action.card)]
+                        [("role1", Role.to_string_plural card1.Action.card)
+                        ; ("role2", Role.to_string_plural card2.Action.card)]
   | _ -> failwith "Invariant violated: Seer saw more than 2 cards"
 
 let robber_page game player =
   match Player.swap player with
     None -> page "pages/robber.html" [("players", player_choice game player)]
-  | Some (_, p2) -> page "pages/robber_reveal.html" [("role", Role.to_string (name_to_role game p2))]
+  | Some (_, p2) -> page "pages/robber_reveal.html" [("role", Role.to_string_plural (name_to_role game p2))]
 
 let troublemaker_page game player =
   match Player.swap player with
@@ -338,7 +358,7 @@ let insomniac_page game player =
   then if double_check_insomniac game player
        then page "pages/insomniac_same.html" []
        else failwith "Game failed to make insomniac swap correctly."
-  else page "pages/insomniac_change.html" [("role", Role.to_string (Player.morning_role player))]
+  else page "pages/insomniac_change.html" [("role", Role.to_string_plural (Player.morning_role player))]
 
 let all_werewolves game =
   String.Map.keys
@@ -362,7 +382,7 @@ let minion_no_werewolves game player =
 
 
 let minion_page game player =
-  match all_werewolves game with
+  match all_werewolves game @ dream_wolves game with
     [] -> (match Player.views player with
              [] -> minion_no_werewolves game player
            | _ -> ());
@@ -381,6 +401,7 @@ let night_page game player =
   else
     match player.evening_role with
       Role.Werewolf -> werewolf_page game player
+    | Role.DreamWolf -> no_action_page game player
     | Role.Tanner -> no_action_page game player
     | Role.Minion -> minion_page game player
     | Role.Mason -> mason_page game player
@@ -417,7 +438,7 @@ let action_list ?(third_person=false) player =
 let debate_page player =
   match Player.is_vote_ready player with
     false -> page "pages/debate.html" [("actions", action_list player)
-                                    ; ("original", Role.to_string (Player.evening_role player))]
+                                     ; ("original", Role.to_string_plural (Player.evening_role player))]
   | true -> page "pages/wait.html" []
 
 let vote_page game player =
@@ -431,8 +452,8 @@ let results_page game player results =
                          Option.some_if (not(Player.name p = Player.name player))
                            (Page.process result_template
                               [("player", Player.name p)
-                              ; ("original", Role.to_string (Player.evening_role p))
-                              ; ("new", Role.to_string (Player.morning_role p))
+                              ; ("original", Role.to_string_plural (Player.evening_role p))
+                              ; ("new", Role.to_string_plural (Player.morning_role p))
                               ; ("actions", action_list ~third_person:true p)])))
                     |> String.Map.data
                     |> String.concat ~sep:"\n"
@@ -448,8 +469,8 @@ let results_page game player results =
   page "pages/results.html" [("result", result)
                            ; ("winner", Role.Team.to_string results.Game.winner)
                            ; ("votes", votes)
-                           ; ("original", Role.to_string (Player.evening_role player))
-                           ; ("new", Role.to_string (Player.morning_role player))
+                           ; ("original", Role.to_string_plural (Player.evening_role player))
+                           ; ("new", Role.to_string_plural (Player.morning_role player))
                            ; ("player_results", all_players)
                            ; ("actions", action_list player)]
 
@@ -526,6 +547,7 @@ let update_config variables =
     let open Option in
     Config.empty
     |> Config.update ~role:Role.Werewolf ~count:(config_exn variables "werewolves")
+    >>= Config.update ~role:Role.DreamWolf ~count:(config_exn variables "dreamwolves")
     >>= (Config.update ~role:Role.Tanner ~count:(config_exn variables "tanners"))
     >>= (Config.update ~role:Role.Minion ~count:(config_exn variables "minions"))
     >>= (Config.update ~role:Role.Robber ~count:(config_exn variables "robbers"))
@@ -660,27 +682,32 @@ let vote variables =
 let direct url variables =
   let parts = Str.split (Str.regexp "/+") url in
   printf "%s\n" (List.to_string parts ~f:(fun s -> s));
-  try
-    match parts with
-    | ["refresh"] -> refresh variables
-    | ["newgame"] -> new_game variables
-    | ["joingame"] -> join_game variables
-    | ["savesettings"] -> update_config variables |> update_game; refresh variables
-    | ["startgame"] -> start_game variables; refresh variables
-    | ["beginnight"] -> begin_night variables; empty_response
-    | ["favicon.ico"] -> favicon
-    | ["images"; img] -> image img ~extension:"png"
-    | ["players"] -> players variables
-    | ["ready"] -> ready variables; empty_response
-    | ["rob"] -> rob variables; empty_response
-    | ["troublemake"] -> troublemake variables; empty_response
-    | ["see"] -> see variables; empty_response
-    | ["leavegame"] -> leave variables; empty_response
-    | ["voteready"] -> vote_ready variables; empty_response
-    | ["vote"] -> vote variables; empty_response
-    | [] -> index ()
-    | _ -> not_found
-  with InvalidInput s -> (printf "Error: %s \n" s; page "pages/start.html" [("error", s)])
+  let%bind maybe_page =
+    try_with ~extract_exn:true (fun () ->
+        match parts with
+        | ["refresh"] -> refresh variables
+        | ["newgame"] -> new_game variables
+        | ["joingame"] -> join_game variables
+        | ["savesettings"] -> update_config variables |> update_game; refresh variables
+        | ["startgame"] -> start_game variables; refresh variables
+        | ["beginnight"] -> begin_night variables; empty_response
+        | ["favicon.ico"] -> favicon
+        | ["images"; img] -> image img ~extension:"png"
+        | ["players"] -> players variables
+        | ["ready"] -> ready variables; empty_response
+        | ["rob"] -> rob variables; empty_response
+        | ["troublemake"] -> troublemake variables; empty_response
+        | ["see"] -> see variables; empty_response
+        | ["leavegame"] -> leave variables; empty_response
+        | ["voteready"] -> vote_ready variables; empty_response
+        | ["vote"] -> vote variables; empty_response
+        | [] -> index ()
+        | _ -> not_found)
+  in
+  match maybe_page with
+    Ok page -> return page
+  | Error (InvalidInput s) -> (printf "Error: %s \n" s; page "pages/start.html" [("error", s)])
+  | Error _ -> not_found
 
 let run port () =
   let%bind server =

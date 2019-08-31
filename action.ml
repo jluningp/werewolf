@@ -25,6 +25,7 @@ let selfify me card third_person =
 
 let article = function
     Role.Werewolf -> "a"
+  | Role.DreamWolf -> "a"
   | Role.Tanner -> "a"
   | Role.Minion -> "a"
   | Role.Seer -> "the"

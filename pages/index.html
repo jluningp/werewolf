@@ -263,6 +263,7 @@ function recountRoles () {
     if (roleNum && rolesNeeded) {
         var players = document.getElementsByClassName("player").length;
         var roles = (parseInt(document.getElementById("werewolves").value)
+                     + parseInt(document.getElementById("dreamwolves").value)
                      + parseInt(document.getElementById("tanners").value)
                      + parseInt(document.getElementById("minions").value)
                      + boolInt(document.getElementById("robbers").checked)
@@ -281,6 +282,7 @@ function recountRoles () {
 
 function formatRoles () {
     var ww = document.getElementById("werewolves").value;
+    var dw = document.getElementById("dreamwolves").value;
     var r = boolIntStr(document.getElementById("robbers").checked);
     var t = boolIntStr(document.getElementById("troublemakers").checked);
     var s = boolIntStr(document.getElementById("seers").checked);
@@ -290,6 +292,7 @@ function formatRoles () {
     var ta = document.getElementById("tanners").value;
     var mi = document.getElementById("minions").value;
     return ("&werewolves=" + ww +
+            "&dreamwolves=" + dw +
             "&tanners=" + ta +
             "&minions=" + mi +
             "&robbers=" + r +

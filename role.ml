@@ -14,6 +14,7 @@ module Team = struct
 end
 
 type t = Werewolf
+       | DreamWolf
        | Tanner
        | Minion
        | Seer
@@ -34,6 +35,7 @@ let of_string = function
   | "insomniac" -> Some Insomniac
   | "tanner" -> Some Tanner
   | "minion" -> Some Minion
+  | "dream wolf" -> Some DreamWolf
   | _ -> None
 
 let to_string = function
@@ -46,6 +48,7 @@ let to_string = function
   | Insomniac -> "insomniac"
   | Tanner -> "tanner"
   | Minion -> "minion"
+  | DreamWolf -> "dream wolf"
   | Unassigned -> "no role yet"
 
 let to_string_plural = function
@@ -58,6 +61,7 @@ let to_string_plural = function
   | Insomniac -> "insomniacs"
   | Tanner -> "tanners"
   | Minion -> "minions"
+  | DreamWolf -> "dreamwolves"
   | Unassigned -> "no roles yet"
 
 let team = function
@@ -70,6 +74,7 @@ let team = function
   | Insomniac -> Team.Villagers
   | Tanner -> Team.Tanner
   | Minion -> Team.Werewolves
+  | DreamWolf -> Team.Werewolves
   | Unassigned -> failwith "Cannot get team of unassigned."
 
 let equal r1 r2 = r1 = r2

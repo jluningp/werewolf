@@ -10,6 +10,7 @@ module Team : sig
 end
 
 type t = Werewolf
+       | DreamWolf
        | Tanner
        | Minion
        | Seer
