@@ -287,9 +287,13 @@ let werewolf_page game player =
      (match Player.views player with
         [] -> werewolf_see_others game player wolves dream_wolves
       | _ -> ());
-     let wolf_list = sprintf "<ul>%s</ul>" (String.concat ~sep:""
-                                              (List.map wolves ~f:(fun s ->
-                                                   sprintf "<li>%s</li>" s))) in
+     let maybe_wolf_list =
+       if List.is_empty wolves
+       then "<br>No other werewolves.<br><br>"
+       else sprintf "<ul>%s</ul>"
+              (String.concat ~sep:""
+                 (List.map wolves ~f:(fun s ->
+                      sprintf "<li>%s</li>" s))) in
      let maybe_dream_wolf_list =
        if List.is_empty dream_wolves
        then ""
@@ -297,7 +301,8 @@ let werewolf_page game player =
               (String.concat ~sep:""
                  (List.map dream_wolves ~f:(fun s ->
                       sprintf "<li>%s</li>" s))) in
-     page "pages/werewolves.html" [("names", wolf_list); ("dream_wolves", maybe_dream_wolf_list)]
+     page "pages/werewolves.html" [("werewolves", maybe_wolf_list);
+                                   ("dream_wolves", maybe_dream_wolf_list)]
 
 let mason_page game player =
   match other_masons game player with
