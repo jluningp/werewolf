@@ -269,6 +269,7 @@ function recountRoles () {
                      + boolInt(document.getElementById("robbers").checked)
                      + boolInt(document.getElementById("troublemakers").checked)
                      + boolInt(document.getElementById("seers").checked)
+                     + boolInt(document.getElementById("apprenticeseers").checked)
                      + parseInt(document.getElementById("insomniacs").value)
                      + parseInt(document.getElementById("masons").value)
                      + parseInt(document.getElementById("villagers").value))
@@ -286,6 +287,7 @@ function formatRoles () {
     var r = boolIntStr(document.getElementById("robbers").checked);
     var t = boolIntStr(document.getElementById("troublemakers").checked);
     var s = boolIntStr(document.getElementById("seers").checked);
+    var as = boolIntStr(document.getElementById("apprenticeseers").checked);
     var i = document.getElementById("insomniacs").value
     var m = document.getElementById("masons").value
     var v = document.getElementById("villagers").value
@@ -298,6 +300,7 @@ function formatRoles () {
             "&robbers=" + r +
             "&troublemakers=" + t +
             "&seers=" + s +
+            "&apprenticeseers=" + as +
             "&insomniacs=" + i +
             "&masons=" + m +
             "&villagers=" + v);

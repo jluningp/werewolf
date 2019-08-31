@@ -1,6 +1,6 @@
 ### Starting build.
 # Target: server.ml.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:ml, file:server.ml, ocaml, ocamldep, quiet, short_paths, thread, traverse }
-ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules server.ml > server.ml.depends
+ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules server.ml > server.ml.depends # cached
 # Target: action.mli.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:mli, file:action.mli, ocaml, ocamldep, quiet, short_paths, thread, traverse }
 ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules action.mli > action.mli.depends # cached
 # Target: role.mli.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:mli, file:role.mli, ocaml, ocamldep, quiet, short_paths, thread, traverse }
@@ -30,7 +30,7 @@ ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-
 # Target: http.cmi, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, byte, compile, debug, extension:mli, file:http.mli, interf, ocaml, quiet, short_paths, thread, traverse }
 ocamlfind ocamlc -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o http.cmi http.mli # cached
 # Target: server.cmo, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, byte, compile, debug, extension:cmo, extension:ml, file:server.cmo, file:server.ml, implem, ocaml, quiet, short_paths, thread, traverse }
-ocamlfind ocamlc -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o server.cmo server.ml
+ocamlfind ocamlc -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o server.cmo server.ml # cached
 # Target: action.ml.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:ml, file:action.ml, ocaml, ocamldep, quiet, short_paths, thread, traverse }
 ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules action.ml > action.ml.depends # cached
 # Target: role.ml.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:ml, file:role.ml, ocaml, ocamldep, quiet, short_paths, thread, traverse }
@@ -44,11 +44,11 @@ ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-
 # Target: cards.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:cards.cmx, file:cards.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
 ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o cards.cmx cards.ml # cached
 # Target: config.ml.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:ml, file:config.ml, ocaml, ocamldep, quiet, short_paths, thread, traverse }
-ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules config.ml > config.ml.depends # cached
-# Target: config.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:config.cmx, file:config.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
-ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o config.cmx config.ml # cached
+ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules config.ml > config.ml.depends
 # Target: game.ml.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:ml, file:game.ml, ocaml, ocamldep, quiet, short_paths, thread, traverse }
 ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules game.ml > game.ml.depends # cached
+# Target: config.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:config.cmx, file:config.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
+ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o config.cmx config.ml
 # Target: player.ml.depends, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, extension:ml, file:player.ml, ocaml, ocamldep, quiet, short_paths, thread, traverse }
 ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-ppx' -modules player.ml > player.ml.depends # cached
 # Target: player.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:player.cmx, file:player.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
@@ -60,7 +60,7 @@ ocamlfind ocamldep -package async -package str -package core -ppx 'ppx-jane -as-
 # Target: http.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:http.cmx, file:http.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
 ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o http.cmx http.ml # cached
 # Target: server.cmx, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, compile, debug, extension:cmx, extension:ml, file:server.cmx, file:server.ml, implem, native, ocaml, quiet, short_paths, thread, traverse }
-ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o server.cmx server.ml
+ocamlfind ocamlopt -c -w A-4-33-40-41-42-43-34-44 -strict-sequence -g -bin-annot -short-paths -thread -package async -package str -package core -ppx 'ppx-jane -as-ppx' -o server.cmx server.ml # cached
 # Target: server.native, tags: { package(async), package(core), package(str), ppx(ppx-jane -as-ppx), bin_annot, debug, dont_link_with, extension:native, file:server.native, link, native, ocaml, program, quiet, short_paths, thread, traverse }
 ocamlfind ocamlopt -linkpkg -g -thread -package async -package str -package core role.cmx action.cmx cards.cmx config.cmx player.cmx game.cmx http.cmx server.cmx -o server.native
 # Compilation successful.

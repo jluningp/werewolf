@@ -4,6 +4,7 @@ type t = {
   ; tanner : int
   ; minion : int
   ; seer : bool
+  ; apprentice_seer : bool
   ; robber : bool
   ; villager : int
   ; troublemaker : bool

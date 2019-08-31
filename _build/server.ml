@@ -47,6 +47,7 @@ let test_game =
       werewolf=0
     ; dream_wolf=0
     ; seer=false
+    ; apprentice_seer=false
     ; robber=true
     ; villager=1
     ; troublemaker=false
@@ -144,7 +145,8 @@ let config_info ?(edit=false) game =
   let roles = List.map (Config.to_alist game.config) ~f:(fun (role, count) ->
                   (Role.to_string_plural role,
                    match role with
-                     (Role.Troublemaker | Role.Robber | Role.Seer) ->
+                     (Role.Troublemaker | Role.Robber
+                     | Role.Seer | Role.ApprenticeSeer) ->
                       if edit
                       then int_to_checkbox count
                       else Int.to_string count
@@ -233,7 +235,7 @@ let role_page game player =
                         ; ("button", conditional_element)]
 
 
-let werewolf_see_center game player =
+let see_one_center game player =
   let card = Cards.draw1 (Game.unassigned game) in
   (player
    |> Player.add_action ~action:(Action.View {card; Action.player_or_center="center"})
@@ -276,10 +278,17 @@ let insomniac_see_self game player =
   |> Game.set_player game
   |> update_game
 
+let apprentice_seer_page game player =
+  match Player.views player with
+    [] -> let card = see_one_center game player in
+          page "pages/apprentice_seer.html" [("card", Role.to_string_plural card)]
+  | [card] -> page "pages/apprentice_seer.html" [("card", Role.to_string_plural card.Action.card)]
+  | _ -> failwith "Broken invariant: apprentice seer saw multiple cards"
+
 let werewolf_page game player =
   match other_werewolves game player, dream_wolves game with
     ([], []) -> (match Player.views player with
-                   [] -> let card = werewolf_see_center game player in
+                   [] -> let card = see_one_center game player in
                          page "pages/lone_werewolf.html" [("card", Role.to_string_plural card)]
                  | [card] -> page "pages/lone_werewolf.html" [("card", Role.to_string_plural card.Action.card)]
                  | _ -> failwith "Broken invariant: lone werewolf saw multiple cards")
@@ -411,6 +420,7 @@ let night_page game player =
     | Role.Minion -> minion_page game player
     | Role.Mason -> mason_page game player
     | Role.Seer -> seer_page game player
+    | Role.ApprenticeSeer -> apprentice_seer_page game player
     | Role.Robber -> robber_page game player
     | Role.Troublemaker -> troublemaker_page game player
     | Role.Villager -> no_action_page game player
@@ -558,6 +568,7 @@ let update_config variables =
     >>= (Config.update ~role:Role.Robber ~count:(config_exn variables "robbers"))
     >>= (Config.update ~role:Role.Troublemaker ~count:(config_exn variables "troublemakers"))
     >>= (Config.update ~role:Role.Seer ~count:(config_exn variables "seers"))
+    >>= (Config.update ~role:Role.ApprenticeSeer ~count:(config_exn variables "apprenticeseers"))
     >>= (Config.update ~role:Role.Insomniac ~count:(config_exn variables "insomniacs"))
     >>= (Config.update ~role:Role.Mason ~count:(config_exn variables "masons"))
     >>= (Config.update ~role:Role.Villager ~count:(config_exn variables "villagers"))

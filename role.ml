@@ -18,6 +18,7 @@ type t = Werewolf
        | Tanner
        | Minion
        | Seer
+       | ApprenticeSeer
        | Robber
        | Villager
        | Troublemaker
@@ -36,11 +37,14 @@ let of_string = function
   | "tanner" -> Some Tanner
   | "minion" -> Some Minion
   | "dream wolf" -> Some DreamWolf
+  | "apprentice seer" -> Some ApprenticeSeer
   | _ -> None
 
 let to_string = function
     Werewolf -> "werewolf"
+  | DreamWolf -> "dream wolf"
   | Seer -> "seer"
+  | ApprenticeSeer -> "apprentice seer"
   | Robber -> "robber"
   | Villager -> "villager"
   | Troublemaker -> "troublemaker"
@@ -48,12 +52,12 @@ let to_string = function
   | Insomniac -> "insomniac"
   | Tanner -> "tanner"
   | Minion -> "minion"
-  | DreamWolf -> "dream wolf"
   | Unassigned -> "no role yet"
 
 let to_string_plural = function
     Werewolf -> "werewolves"
   | Seer -> "seers"
+  | ApprenticeSeer -> "apprenticeseers"
   | Robber -> "robbers"
   | Villager -> "villagers"
   | Troublemaker -> "troublemakers"
@@ -75,6 +79,7 @@ let team = function
   | Tanner -> Team.Tanner
   | Minion -> Team.Werewolves
   | DreamWolf -> Team.Werewolves
+  | ApprenticeSeer -> Team.Villagers
   | Unassigned -> failwith "Cannot get team of unassigned."
 
 let equal r1 r2 = r1 = r2

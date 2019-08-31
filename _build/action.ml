@@ -29,6 +29,7 @@ let article = function
   | Role.Tanner -> "a"
   | Role.Minion -> "a"
   | Role.Seer -> "the"
+  | Role.ApprenticeSeer -> "the"
   | Role.Robber -> "the"
   | Role.Villager -> "a"
   | Role.Troublemaker -> "the"

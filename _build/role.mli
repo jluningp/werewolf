@@ -14,6 +14,7 @@ type t = Werewolf
        | Tanner
        | Minion
        | Seer
+       | ApprenticeSeer
        | Robber
        | Villager
        | Troublemaker
