@@ -232,7 +232,8 @@ let role_page game player =
     else "Waiting for owner to begin game.<input type='hidden' id='view_role'>"
   in
   page "pages/role.html" [("role", Role.to_string_plural (Player.evening_role player))
-                        ; ("button", conditional_element)]
+                        ; ("button", conditional_element)
+                        ; ("description", Role.description (Player.evening_role player))]
 
 
 let see_one_center game player =

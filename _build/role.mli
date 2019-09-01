@@ -28,6 +28,8 @@ val to_string : t -> string
 
 val to_string_plural : t -> string
 
+val description : t -> string
+
 val equal : t -> t -> bool
 
 val team : t -> Team.t
