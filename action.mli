@@ -9,7 +9,9 @@ type vote = Center
 type t = View of view
        | ViewLoneMason
        | ViewNoWerewolves
+       | ViewAsMysticWolf of view
        | Swap of string * string
+       | ReadyForSecondAction
        | Ready
        | VoteReady
        | Vote of vote

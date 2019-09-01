@@ -3,6 +3,7 @@ open Core
 type t = {
     werewolf : int
   ; dream_wolf : int
+  ; mystic_wolf : int
   ; tanner : int
   ; minion : int
   ; seer : bool
@@ -17,6 +18,7 @@ type t = {
 let empty = {
     werewolf=0
   ; dream_wolf=0
+  ; mystic_wolf=0
   ; seer=false
   ; apprentice_seer=false
   ; robber=false
@@ -28,10 +30,11 @@ let empty = {
   ; minion=0
   }
 
-let to_list_dups {werewolf; dream_wolf; seer; apprentice_seer;
+let to_list_dups {werewolf; dream_wolf; mystic_wolf; seer; apprentice_seer;
                   robber; villager; troublemaker; mason; insomniac; tanner; minion} =
   List.concat [List.init werewolf ~f:(fun _ -> Role.Werewolf)
              ; List.init dream_wolf ~f:(fun _ -> Role.DreamWolf)
+             ; List.init mystic_wolf ~f:(fun _ -> Role.MysticWolf)
              ; if seer then [Role.Seer] else []
              ; if apprentice_seer then [Role.ApprenticeSeer] else []
              ; if robber then [Role.Robber] else []
@@ -42,10 +45,11 @@ let to_list_dups {werewolf; dream_wolf; seer; apprentice_seer;
              ; List.init tanner ~f:(fun _ -> Role.Tanner)
              ; List.init minion ~f:(fun _ -> Role.Minion)]
 
-let to_alist {werewolf; dream_wolf; seer; apprentice_seer;
+let to_alist {werewolf; dream_wolf; mystic_wolf; seer; apprentice_seer;
               robber; villager; troublemaker; mason; insomniac; tanner; minion} =
   [(Role.Werewolf, werewolf)
   ; (Role.DreamWolf, dream_wolf)
+  ; (Role.MysticWolf, mystic_wolf)
   ; (Role.Seer, if seer then 1 else 0)
   ; (Role.ApprenticeSeer, if apprentice_seer then 1 else 0)
   ; (Role.Robber, if robber then 1 else 0)
@@ -65,6 +69,7 @@ let update config ~role ~count =
     match role with
       Role.Werewolf -> Some {config with werewolf=count}
     | Role.DreamWolf -> Some {config with dream_wolf=count}
+    | Role.MysticWolf -> Some {config with mystic_wolf=count}
     | Role.Seer -> Option.some_if (valid_bool count) {config with seer=(count = 1)}
     | Role.ApprenticeSeer -> Option.some_if (valid_bool count) {config with apprentice_seer=(count = 1)}
     | Role.Robber -> Option.some_if (valid_bool count) {config with robber=(count = 1)}

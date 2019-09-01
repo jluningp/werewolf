@@ -131,7 +131,8 @@ let make_moves game =
 let winner game voted_for =
   let no_werewolves = String.Map.for_all game.players ~f:(fun p ->
                           not(Role.equal (Player.morning_role p) Role.Werewolf) &&
-                            not (Role.equal (Player.morning_role p) Role.DreamWolf)) in
+                            not (Role.equal (Player.morning_role p) Role.DreamWolf) &&
+                        not (Role.equal (Player.morning_role p) Role.MysticWolf)) in
   let minion = String.Map.exists game.players ~f:(fun p ->
                    Role.equal (Player.morning_role p) Role.Minion) in
   match voted_for with
@@ -141,6 +142,7 @@ let winner game voted_for =
   | Action.Player p -> match Player.morning_role (String.Map.find_exn game.players p) with
                          Role.Werewolf -> Role.Team.Villagers
                        | Role.DreamWolf -> Role.Team.Villagers
+                       | Role.MysticWolf -> Role.Team.Villagers
                        | Role.Tanner -> Role.Team.Tanner
                        | Role.Minion -> if no_werewolves
                                         then Role.Team.NoOne

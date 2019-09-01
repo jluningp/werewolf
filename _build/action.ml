@@ -11,7 +11,9 @@ type vote = Center
 type t = View of view
        | ViewLoneMason
        | ViewNoWerewolves
+       | ViewAsMysticWolf of view
        | Swap of string * string
+       | ReadyForSecondAction
        | Ready
        | VoteReady
        | Vote of vote
@@ -26,6 +28,7 @@ let selfify me card third_person =
 let article = function
     Role.Werewolf -> "a"
   | Role.DreamWolf -> "a"
+  | Role.MysticWolf -> "a"
   | Role.Tanner -> "a"
   | Role.Minion -> "a"
   | Role.Seer -> "the"
@@ -39,7 +42,7 @@ let article = function
 
 let to_string ?(third_person=false) action ~me =
   match action with
-    View {card; player_or_center} ->
+    View {card; player_or_center} | ViewAsMysticWolf {card; player_or_center} ->
      (match player_or_center with
         "center" -> sprintf "Viewed a %s card in the center." (Role.to_string card)
       | player ->
@@ -52,6 +55,7 @@ let to_string ?(third_person=false) action ~me =
                              (selfify me card1 third_person)
                              (selfify me card2 third_person)
   | Ready -> "Ready"
+  | ReadyForSecondAction -> "Ready for your second action."
   | ViewLoneMason -> "Viewed that you were the lone mason."
   | ViewNoWerewolves -> "Viewed that there were no werewolves."
   | VoteReady -> "Is ready to vote."

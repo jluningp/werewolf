@@ -15,6 +15,7 @@ end
 
 type t = Werewolf
        | DreamWolf
+       | MysticWolf
        | Tanner
        | Minion
        | Seer
@@ -37,12 +38,14 @@ let of_string = function
   | "tanner" -> Some Tanner
   | "minion" -> Some Minion
   | "dream wolf" -> Some DreamWolf
+  | "mystic wolf" -> Some MysticWolf
   | "apprentice seer" -> Some ApprenticeSeer
   | _ -> None
 
 let to_string = function
     Werewolf -> "werewolf"
   | DreamWolf -> "dream wolf"
+  | MysticWolf -> "mystic wolf"
   | Seer -> "seer"
   | ApprenticeSeer -> "apprentice seer"
   | Robber -> "robber"
@@ -66,6 +69,7 @@ let to_string_plural = function
   | Tanner -> "tanners"
   | Minion -> "minions"
   | DreamWolf -> "dreamwolves"
+  | MysticWolf -> "mysticwolves"
   | Unassigned -> "no roles yet"
 
 let description = function
@@ -79,7 +83,8 @@ let description = function
   | Insomniac -> "You are on the villager team. At the end of the night, you get to see what your new role is."
   | Tanner -> "You are on your own team. Your goal is get voted for."
   | Minion -> "You are on the werewolf team. You get to see who the werewolves are, but they do not know who you are. You win if the werewolves are not voted for, even if you are voted for."
-  | DreamWolf -> "You are on the werewolf team. You are like a werewolf, except you do not get to know who the other werewolves are, if there are any."
+  | DreamWolf -> "You are on the werewolf team. You are a werewolf, except you do not get to know who the other werewolves are, if there are any."
+  | MysticWolf -> "You are on the werewolf team. You are a werewolf, except you may also see one other player's role."
   | Unassigned -> "There has been an error, and you have not been assigned a role. Please start a new game."
 
 let team = function
@@ -93,6 +98,7 @@ let team = function
   | Tanner -> Team.Tanner
   | Minion -> Team.Werewolves
   | DreamWolf -> Team.Werewolves
+  | MysticWolf -> Team.Werewolves
   | ApprenticeSeer -> Team.Villagers
   | Unassigned -> failwith "Cannot get team of unassigned."
 

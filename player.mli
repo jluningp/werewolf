@@ -10,11 +10,15 @@ val create : string -> t
 
 val is_ready : t -> bool
 
+val is_ready_for_second_action : t -> bool
+
 val is_vote_ready : t -> bool
 
 val vote : t -> Action.vote option
 
 val views : t -> Action.view list
+
+val mystic_wolf_view : t -> Action.view option
 
 val swap : t -> (string * string) option
 

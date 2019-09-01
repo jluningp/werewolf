@@ -11,6 +11,7 @@ end
 
 type t = Werewolf
        | DreamWolf
+       | MysticWolf
        | Tanner
        | Minion
        | Seer

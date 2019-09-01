@@ -1,1 +1,1 @@
-server.ml: Action Async Cards Command Config Core Game Http Int Let_syntax List Option Player Reader Role Str String Tcp Writer
+server.ml: Action Async Cards Command Config Core Exn Game Http Int Let_syntax List Option Player Reader Role Str String Tcp Writer

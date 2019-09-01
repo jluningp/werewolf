@@ -25,6 +25,11 @@ let is_ready player =
         Action.Ready -> true
       | _ -> false)
 
+let is_ready_for_second_action player =
+  List.exists player.log ~f:(function
+        Action.ReadyForSecondAction -> true
+      | _ -> false)
+
 let is_vote_ready player =
   List.exists player.log ~f:(function
         Action.VoteReady -> true
@@ -42,6 +47,11 @@ let views player =
                                     ; Action.player_or_center=player.name}
       | Action.ViewNoWerewolves -> Some {Action.card=Role.Minion
                                        ; Action.player_or_center=player.name}
+      | _ -> None)
+
+let mystic_wolf_view player =
+  List.find_map player.log ~f:(function
+        Action.ViewAsMysticWolf view -> Some view
       | _ -> None)
 
 let swap player =

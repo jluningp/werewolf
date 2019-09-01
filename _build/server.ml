@@ -46,6 +46,7 @@ let test_game =
   ; config={
       werewolf=0
     ; dream_wolf=0
+    ; mystic_wolf=0
     ; seer=false
     ; apprentice_seer=false
     ; robber=true
@@ -164,7 +165,8 @@ let config_info ?(edit=false) game =
 let other_werewolves game player =
   game
   |> Game.players
-  |> String.Map.filter ~f:(fun p -> Role.equal (Player.evening_role p) Role.Werewolf
+  |> String.Map.filter ~f:(fun p -> (Role.equal (Player.evening_role p) Role.Werewolf
+                                     || Role.equal (Player.evening_role p) Role.MysticWolf)
                                     && (Player.name p <> Player.name player))
   |> String.Map.keys
 
@@ -314,6 +316,16 @@ let werewolf_page game player =
      page "pages/werewolves.html" [("werewolves", maybe_wolf_list);
                                    ("dream_wolves", maybe_dream_wolf_list)]
 
+
+let mystic_wolf_page game player =
+  if Player.is_ready_for_second_action player
+  then (match Player.mystic_wolf_view player with
+          None -> page "pages/mystic_wolf.html" [("players", player_choice game player)]
+        | Some {card; player_or_center} -> page "pages/reveal_player.html"
+                                             [("name", player_or_center)
+                                             ; ("role", Role.to_string_plural card)])
+  else werewolf_page game player
+
 let mason_page game player =
   match other_masons game player with
     [] -> (match Player.views player with
@@ -331,7 +343,7 @@ let mason_page game player =
 let seer_page game player =
   match Player.views player with
     [] -> page "pages/seer.html" [("players", player_choice game player)]
-  | [{card; player_or_center}] -> page "pages/seer_reveal_player.html"
+  | [{card; player_or_center}] -> page "pages/reveal_player.html"
                                     [("name", player_or_center)
                                     ; ("role", Role.to_string_plural card)]
   | [card1; card2] -> page "pages/seer_reveal_center.html"
@@ -416,6 +428,7 @@ let night_page game player =
   else
     match player.evening_role with
       Role.Werewolf -> werewolf_page game player
+    | Role.MysticWolf -> mystic_wolf_page game player
     | Role.DreamWolf -> no_action_page game player
     | Role.Tanner -> no_action_page game player
     | Role.Minion -> minion_page game player
@@ -440,6 +453,7 @@ let action_list ?(third_person=false) player =
   let acts = List.filter_map (List.rev (Player.log player)) ~f:(function
                    Action.Ready -> None
                  | Action.VoteReady -> None
+                 | Action.ReadyForSecondAction -> None
                  | action -> Some (Action.to_string
                                      ~third_person
                                      ~me:(Player.name player)
@@ -564,6 +578,7 @@ let update_config variables =
     Config.empty
     |> Config.update ~role:Role.Werewolf ~count:(config_exn variables "werewolves")
     >>= Config.update ~role:Role.DreamWolf ~count:(config_exn variables "dreamwolves")
+    >>= Config.update ~role:Role.MysticWolf ~count:(config_exn variables "mysticwolves")
     >>= (Config.update ~role:Role.Tanner ~count:(config_exn variables "tanners"))
     >>= (Config.update ~role:Role.Minion ~count:(config_exn variables "minions"))
     >>= (Config.update ~role:Role.Robber ~count:(config_exn variables "robbers"))
@@ -598,6 +613,19 @@ let ready variables =
   let player = player_exn variables game in
   player
   |> Player.add_action ~action:Action.Ready
+  |> Game.set_player game
+  |> update_game
+
+let wolf_ready variables =
+  let game = game_exn variables in
+  let player = player_exn variables game in
+  let action =
+    if Role.equal (Player.evening_role player) Role.MysticWolf
+    then Action.ReadyForSecondAction
+    else Action.Ready
+  in
+  player
+  |> Player.add_action ~action
   |> Game.set_player game
   |> update_game
 
@@ -658,6 +686,23 @@ let see variables =
        | None -> raise (InvalidInput "Invalid or missing targets for seer action.")
   else raise (InvalidInput "You cannot see (or see twice).")
 
+let mystic_see variables =
+  let game = game_exn variables in
+  let player = player_exn variables game in
+  if Role.equal player.evening_role Role.MysticWolf && Option.is_none (Player.mystic_wolf_view player)
+  then match String.Map.find variables "target" with
+         Some name -> (match String.Map.find (Game.players game) name with
+                         None -> raise (InvalidInput "Mystic wolf target is not a player.")
+                       | Some target_player -> (player
+                                                |> Player.add_action
+                                                     ~action:(Action.ViewAsMysticWolf
+                                                                {card=Player.evening_role target_player
+                                                                ; player_or_center=name})
+                                                |> Game.set_player game
+                                                |> update_game))
+       | None -> raise (InvalidInput "Invalid or missing targets for mystic wolf action.")
+  else raise (InvalidInput "You cannot see as a mystic wolf (or see twice as one).")
+
 let leave variables =
   let game = game_exn variables in
   let player = player_exn variables game in
@@ -712,6 +757,8 @@ let direct url variables =
         | ["images"; img] -> image img ~extension:"png"
         | ["players"] -> players variables
         | ["ready"] -> ready variables; empty_response
+        | ["wolfready"] -> wolf_ready variables; empty_response
+        | ["mysticsee"] -> mystic_see variables; empty_response
         | ["rob"] -> rob variables; empty_response
         | ["troublemake"] -> troublemake variables; empty_response
         | ["see"] -> see variables; empty_response
@@ -724,7 +771,7 @@ let direct url variables =
   match maybe_page with
     Ok page -> return page
   | Error (InvalidInput s) -> (printf "Error: %s \n" s; page "pages/start.html" [("error", s)])
-  | Error _ -> not_found
+  | Error e -> (printf "%s\n" (Exn.to_string e)); not_found
 
 let run port () =
   let%bind server =
@@ -744,7 +791,7 @@ let run port () =
 
 let () =
   Command.run (Command.async
-                 ~summary:"An echo server"
+                 ~summary:"The One Night Werewolf server"
                  (Command.Spec.map
                     (Command.Param.flag "port"
                        ~doc:"port"

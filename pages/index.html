@@ -271,6 +271,7 @@ function recountRoles () {
         var players = document.getElementsByClassName("player").length;
         var roles = (parseInt(document.getElementById("werewolves").value)
                      + parseInt(document.getElementById("dreamwolves").value)
+                     + parseInt(document.getElementById("mysticwolves").value)
                      + parseInt(document.getElementById("tanners").value)
                      + parseInt(document.getElementById("minions").value)
                      + boolInt(document.getElementById("robbers").checked)
@@ -291,6 +292,7 @@ function recountRoles () {
 function formatRoles () {
     var ww = document.getElementById("werewolves").value;
     var dw = document.getElementById("dreamwolves").value;
+    var mw = document.getElementById("mysticwolves").value;
     var r = boolIntStr(document.getElementById("robbers").checked);
     var t = boolIntStr(document.getElementById("troublemakers").checked);
     var s = boolIntStr(document.getElementById("seers").checked);
@@ -302,6 +304,7 @@ function formatRoles () {
     var mi = document.getElementById("minions").value;
     return ("&werewolves=" + ww +
             "&dreamwolves=" + dw +
+            "&mysticwolves=" + mw +
             "&tanners=" + ta +
             "&minions=" + mi +
             "&robbers=" + r +
@@ -421,7 +424,15 @@ function troublemake () {
     }
 }
 
+function mystic_see () {
+    see_command("mysticsee");
+}
+
 function see () {
+    see_command ("see");
+}
+
+function see_command (command) {
     var checked = false;
     var radios = document.getElementsByTagName("input");
     for (var i = 0; i < radios.length; i++) {
@@ -432,7 +443,7 @@ function see () {
                 var game = getGame ();
                 var name = getName ();
                 var id = getId ();
-                requestHTML ("see/?game=" + game + "&name=" + name + "&id=" + id + "&target=" + target);
+                requestHTML (command + "/?game=" + game + "&name=" + name + "&id=" + id + "&target=" + target);
                 xmlhttp.onreadystatechange = function () {
                     if (xmlhttp.readyState == 4) {
                         refresh(tryConstantRefresh);
@@ -454,6 +465,18 @@ function ok () {
     var name = getName ();
     var id = getId ();
     requestHTML ("ready/?game=" + game + "&name=" + name + "&id=" + id);
+    xmlhttp.onreadystatechange = function () {
+        if (xmlhttp.readyState == 4) {
+            refresh(tryConstantRefresh);
+        }
+    }
+}
+
+function wolf_ok () {
+    var game = getGame ();
+    var name = getName ();
+    var id = getId ();
+    requestHTML ("wolfready/?game=" + game + "&name=" + name + "&id=" + id);
     xmlhttp.onreadystatechange = function () {
         if (xmlhttp.readyState == 4) {
             refresh(tryConstantRefresh);
