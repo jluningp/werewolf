@@ -1,1 +1,1 @@
-config.ml: Core List Option Role
+config.ml: Core List Option Ppx_module_timer_runtime Role

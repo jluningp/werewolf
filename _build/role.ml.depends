@@ -1,1 +1,1 @@
-role.ml:
+role.ml: Ppx_module_timer_runtime
